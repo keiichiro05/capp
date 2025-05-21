@@ -1,4 +1,11 @@
 <?php
+session_start();
+if (!isset($_SESSION['username'])) {
+    header("Location: ../index.php?status=Silakan login dulu");
+    exit();
+}
+?>
+<?php
 $server = "localhost";
 $user = "root";
 $password = "";

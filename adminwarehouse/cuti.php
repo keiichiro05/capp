@@ -1,17 +1,31 @@
-<!DOCTYPE html>
-<?php include('../konekdb.php');
+<?php
 session_start();
-$username=$_SESSION['username'];
-$idpegawai=$_SESSION['idpegawai'];
-$cekuser=mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Adminwarehouse'");
-$user=mysqli_fetch_array($cekuser);
-$getpegawai=mysqli_query($mysqli, "SELECT * FROM pegawai where id_pegawai='$idpegawai'");
-$pegawai=mysqli_fetch_array($getpegawai);
-if($user['jmluser']=="0")
-{
-header("location:../index.php");
-};?>
-<html>
+
+// Cek apakah user sudah login
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Please Login First");
+    exit();
+}
+
+require_once('../konekdb.php');
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+
+// Cek apakah user memiliki hak akses ke modul Adminwarehouse (menggunakan prepared statement)
+$stmt = $mysqli->prepare("SELECT COUNT(username) as jmluser FROM authorization WHERE username = ? AND modul = 'Adminwarehouse'");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+if ($user['jmluser'] == "0") {
+    header("Location: ../index.php?status=Access Declined");
+    exit();
+}
+?>
+<!DOCTYPE html>
+    <html>
     <head>
         <meta charset="UTF-8">
         <title>Admin Warehouse</title>

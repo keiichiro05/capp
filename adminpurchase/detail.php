@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<?php include('../konekdb.php');
+<?php
+include('../konekdb.php');
+date_default_timezone_set('Asia/Jakarta');
 session_start();
-$username=$_SESSION['username'];
 $idpegawai=$_SESSION['idpegawai'];
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+if(!isset($_SESSION['idpegawai'])){
+    header("location:../index.php?status=please login first");
+    exit();
+    }
 $cekuser=mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Purchase'");
 $user=mysqli_fetch_array($cekuser);
 $getpegawai=mysqli_query($mysqli, "SELECT * FROM pegawai where id_pegawai='$idpegawai'");

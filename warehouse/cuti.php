@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<?php include('../konekdb.php');
+<?php 
 session_start();
-$username=$_SESSION['username'];
-$idpegawai=$_SESSION['idpegawai'];
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+if (!isset($username)) {
+    header("location:../index.php?status=please login first");
+    exit();
+}
+if (!isset($idpegawai)) {
+    header("location:../index.php?status=please login first");
+    exit();
+}
+include('../konekdb.php');
 
 $cekuser=mysqli_query($mysqli,"SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Warehouse'");
 $user=mysqli_fetch_array($cekuser);

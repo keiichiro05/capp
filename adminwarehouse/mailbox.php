@@ -1,14 +1,27 @@
-<?php 
+<?php
 session_start();
 
-$idpegawai=$_SESSION['idpegawai'];
-if(!isset($_SESSION['username'])){
-	header("location:../index.php");
-	exit();
-	}
+// Cek apakah user sudah login
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Please Login First");
+    exit();
+}
 
-if(isset($_SESSION['username'])){
-	$username = $_SESSION['username'];
+require_once('../konekdb.php');
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+
+// Cek apakah user memiliki hak akses ke modul Adminwarehouse (menggunakan prepared statement)
+$stmt = $mysqli->prepare("SELECT COUNT(username) as jmluser FROM authorization WHERE username = ? AND modul = 'Adminwarehouse'");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+if ($user['jmluser'] == "0") {
+    header("Location: ../index.php?status=Access Declined");
+    exit();
 }
 	include "../config.php";
     $profil=mysqli_fetch_array(mysqli_query($conn, "select p.*,DATE_FORMAT( p.Tanggal_Masuk, '%b, %Y') as tglmasuk from pegawai p,authorization a where a.username='$username' and a.id_pegawai = p.id_pegawai"));

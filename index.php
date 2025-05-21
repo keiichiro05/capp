@@ -1,3 +1,11 @@
+<?php
+session_start();
+
+// Header keamanan tambahan
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: no-referrer");
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

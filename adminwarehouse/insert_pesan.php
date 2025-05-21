@@ -1,5 +1,30 @@
 <?php
+session_start();
 
+// Cek apakah user sudah login
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Please Login First");
+    exit();
+}
+
+require_once('../konekdb.php');
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+
+// Cek apakah user memiliki hak akses ke modul Adminwarehouse (menggunakan prepared statement)
+$stmt = $mysqli->prepare("SELECT COUNT(username) as jmluser FROM authorization WHERE username = ? AND modul = 'Adminwarehouse'");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+if ($user['jmluser'] == "0") {
+    header("Location: ../index.php?status=Access Declined");
+    exit();
+}
+?>
+<?php
 $to = $_POST['nama'];
 $from = $_POST['username'];
 $pesan = $_POST['message'];

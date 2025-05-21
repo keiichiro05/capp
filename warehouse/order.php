@@ -2,6 +2,7 @@
 <?php 
 include('../konekdb.php');
 session_start();
+date_default_timezone_set('Asia/Jakarta');
 
 if (!isset($_SESSION['username']) || !isset($_SESSION['idpegawai'])) {
     header("location:../index.php");
@@ -230,8 +231,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                         $barcode = "https://barcode.tec-it.com/barcode.ashx?data=$code&code=Code128&dpi=96";
                         $status = "Order Sent";
 
-                        $insertQuery = "INSERT INTO dariwarehouse (code, nama, kategori, jumlah, satuan, reorder, supplier, cabang, status)
-                                      VALUES ('$code', '$nama', '$kategori', '$jumlah', '$satuan', '$reorder', '$supplier', 'Blitar', '$status')";
+                        $currentDateTime = date('Y-m-d H:i:s'); // Format: Tahun-Bulan-Tanggal Jam:Menit:Detik
+$insertQuery = "INSERT INTO dariwarehouse (code, nama, kategori, jumlah, satuan, reorder, supplier, cabang, status, date_created)
+              VALUES ('$code', '$nama', '$kategori', '$jumlah', '$satuan', '$reorder', '$supplier', 'Blitar', '$status', '$currentDateTime')";
                         $result = mysqli_query($mysqli, $insertQuery);
                         
                         if ($result) {
@@ -256,6 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                                     <th>Quantity</th>
                                     <th>Unit</th>
                                     <th>Supplier</th>
+                                    <th>Date Created</th>
                                     <th>Barcode</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -274,6 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                                         <td>{$order['jumlah']}</td>
                                         <td>{$order['satuan']}</td>
                                         <td>{$order['supplier']}</td>
+                                        <td>".date('d M Y H:i', strtotime($order['date_created']))."</td>
                                         <td><img src='https://barcode.tec-it.com/barcode.ashx?data={$order['code']}&code=Code128&dpi=96' class='barcode-img' alt='Barcode'></td>
                                         <td>";
                                     if ($order['status'] === "0") {

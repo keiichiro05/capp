@@ -1,6 +1,22 @@
-<?php 
+<?php
 include('../konekdb.php');
+include('../koneksi.php');
+date_default_timezone_set('Asia/Jakarta');
+// Check if the session is already started
+if (session_status() == PHP_SESSION_NONE) {
+	session_start();
+}
+// Check if the session variable 'idpegawai' is set
 session_start();
+$idpegawai=$_SESSION['idpegawai'];
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+if(!isset($_SESSION['idpegawai'])){
+    header("location:../index.php?status=please login first");
+    exit();
+    }
 $user=$_SESSION['username'];
 $getuser=mysqli_query($mysqli, "select id_pegawai from authorization where Username='$user'");
 $getiduser=mysqli_fetch_array($getuser);

@@ -1,4 +1,12 @@
 <?php
+session_start();
+$idpegawai=$_SESSION['idpegawai'];
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+?>
+<?php
 include('../konekdb.php');
 session_start();
 
@@ -10,7 +18,6 @@ if($user['jmluser'] == "0") {
     header("location:../index.php");
     exit();
 }
-
 // Check if action and id parameters exist
 if(isset($_GET['action']) && isset($_GET['id'])) {
     $action = $_GET['action'];

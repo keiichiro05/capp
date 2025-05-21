@@ -1,5 +1,17 @@
-<?php 
-include('../koneksi.php');
+<?php
+include('../konekdb.php');
+date_default_timezone_set('Asia/Jakarta');
+session_start();
+$idpegawai=$_SESSION['idpegawai'];
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+if(!isset($_SESSION['idpegawai'])){
+    header("location:../index.php?status=please login first");
+    exit();
+    }
+
 $p=$_GET['p'];
 $a=$_GET['a'];
 if($a=="acc"){

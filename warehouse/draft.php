@@ -1,11 +1,18 @@
 <?php 
 session_start();
 
-$idpegawai=$_SESSION['idpegawai'];
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
 if(!isset($_SESSION['username'])){
-	header("location:../index.php");
+	header("location:../index.php?status=please login first");
 	exit();
 	}
+if (isset($_SESSION['idpegawai'])) {
+    $idpegawai = $_SESSION['idpegawai'];
+} else {
+    header("location:../index.php?status=please login first");
+    exit();
+}
 
 if(isset($_SESSION['username'])){
 	$username = $_SESSION['username'];

@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-    <?php 
-    include('../konekdb.php');
-    session_start();
-
-    if (!isset($_SESSION['username']) || !isset($_SESSION['idpegawai'])) {
-        header("location:../index.php");
-        exit();
-    }
-
+<?php include('../konekdb.php');
+session_start();
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
     $username = $_SESSION['username'];
     $idpegawai = $_SESSION['idpegawai'];
 

@@ -1,13 +1,16 @@
 <?php
 include "konekdb.php";
 session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['username']) || !isset($_SESSION['idpegawai'])) {
-    header("location:../index.php");
-    exit;
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+if (isset($_SESSION['idpegawai'])) {
+    $idpegawai = $_SESSION['idpegawai'];
+} else {
+    header("location:../index.php?status=please login first");
+    exit();
 }
-
 // Get user data for sidebar
 $username = $_SESSION['username'];
 $idpegawai = $_SESSION['idpegawai'];

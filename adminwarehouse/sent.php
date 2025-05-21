@@ -1,15 +1,24 @@
-<?php 
+<?php
 session_start();
-
 $idpegawai=$_SESSION['idpegawai'];
 if(!isset($_SESSION['username'])){
-	header("location:../index.php");
+	header("location:../index.php?status=please login first");
 	exit();
 	}
+?>
+<?php
+include('../konekdb.php');
+session_start();
 
-if(isset($_SESSION['username'])){
-	$username = $_SESSION['username'];
+// Check authorization
+$username = $_SESSION['username'];
+$cekuser = mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Adminwarehouse'");
+$user = mysqli_fetch_array($cekuser);
+if($user['jmluser'] == "0") {
+    header("location:../index.php");
+    exit();
 }
+
 	include "../config.php";
 	$profil=mysqli_fetch_array(mysqli_query("select p.*,DATE_FORMAT( p.Tanggal_Masuk, '%b, %Y') as tglmasuk from pegawai p,authorization a where a.username='$username' and a.id_pegawai = p.id_pegawai"));
     $pesan = mysqli_query("SELECT id_pesan, pg.nama, isi, DATE_FORMAT(waktu,'%d %b %Y %h:%i %p') as waktu, p.status, a.username

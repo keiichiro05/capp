@@ -6,11 +6,16 @@ session_start();
 $username = $_SESSION['username'] ?? null;
 $idpegawai = $_SESSION['idpegawai'] ?? null;
 
-if (!$username || !$idpegawai) {
-    header("location:../index.php");
-    exit;
+if(!isset($_SESSION['username'])){
+	header("location:../index.php?status=please login first");
+	exit();
+	}
+if (isset($_SESSION['idpegawai'])) {
+    $idpegawai = $_SESSION['idpegawai'];
+} else {
+    header("location:../index.php?status=please login first");
+    exit();
 }
-
 $cekuser = mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Warehouse'");
 $user = mysqli_fetch_assoc($cekuser);
 

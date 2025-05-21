@@ -1,18 +1,39 @@
-<!DOCTYPE html>
-<?php include('../konekdb.php');
+<?php
 session_start();
-$username=$_SESSION['username'];
-$idpegawai=$_SESSION['idpegawai'];
-$cekuser=mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Adminwarehouse'");
-$user=mysqli_fetch_array($cekuser);
-$getpegawai=mysqli_query($mysqli, "SELECT * FROM pegawai where id_pegawai='$idpegawai'");
-$pegawai=mysqli_fetch_array($getpegawai);
-if($user['jmluser']=="0")
-{
-header("location:../index.php");
-};?>
-<html>
-<head>
+
+// Cek apakah user sudah login
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Silakan login dulu");
+    exit();
+}
+
+require_once('../konekdb.php');
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+
+// Cek apakah user memiliki hak akses ke modul Adminwarehouse (menggunakan prepared statement)
+$stmt = $mysqli->prepare("SELECT COUNT(username) as jmluser FROM authorization WHERE username = ? AND modul = 'Adminwarehouse'");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+if ($user['jmluser'] == "0") {
+    header("Location: ../index.php?status=Akses ditolak");
+    exit();
+}
+
+// Ambil data pegawai
+$stmtPegawai = $mysqli->prepare("SELECT * FROM pegawai WHERE id_pegawai = ?");
+$stmtPegawai->bind_param("i", $idpegawai);
+$stmtPegawai->execute();
+$resultPegawai = $stmtPegawai->get_result();
+$pegawai = $resultPegawai->fetch_assoc();
+?>
+<!DOCTYPE html>
+    <html>
+    <head>
     <meta charset="UTF-8">
     <title>Admin Warehouse Dashboard</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
