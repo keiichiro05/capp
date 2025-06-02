@@ -66,7 +66,7 @@ if ($user['jmluser'] == "0") {
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Admin Warehouse | E-pharm</title>
+        <title>Warehouse Manager  | E-pharm</title>
         <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
         <!-- bootstrap 3.0.2 -->
         <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
@@ -130,7 +130,7 @@ if ($user['jmluser'] == "0") {
                                 <li class="user-header bg-light-blue">
                                     <img src="../img/<?php echo $profil['foto'];?>" class="img-circle" alt="User Image" />
                                     <p>
-                                        <?php echo $profil['Nama'];?> - Admin Warehouse
+                                        <?php echo $profil['Nama'];?> - Warehouse Manager 
                                         <small>Member since <?php echo $profil['tglmasuk'];?></small>
                                     </p>
                                 </li>

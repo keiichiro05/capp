@@ -6,9 +6,9 @@ $username = $_SESSION['username'] ?? null;
 $idpegawai = $_SESSION['idpegawai'] ?? null;
 
 if(!isset($_SESSION['username'])){
-	header("location:../index.php?status=please login first");
-	exit();
-	}
+    header("location:../index.php?status=please login first");
+    exit();
+}
 if (isset($_SESSION['idpegawai'])) {
     $idpegawai = $_SESSION['idpegawai'];
 } else {
@@ -25,11 +25,15 @@ if ($user['jmluser'] == "0") {
     header("location:../index.php");
     exit;
 }
+
+// Get filter values
+$cabang_filter = isset($_GET['cabang']) ? mysqli_real_escape_string($mysqli, $_GET['cabang']) : '';
+$status_filter = isset($_GET['status']) ? mysqli_real_escape_string($mysqli, $_GET['status']) : '';
 ?>
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Warehouse Cabang Blitar</title>
+        <title>Warehouse Branch</title>
         <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
         <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
         <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
@@ -260,7 +264,7 @@ if ($user['jmluser'] == "0") {
     </head>
     <body class="skin-blue">
         <header class="header">
-            <a href="index.html" class="logo">PSN</a>
+            <a href="index.html" class="logo">Admin Warehouse</a>
             <nav class="navbar navbar-static-top" role="navigation">
                 <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                     <span class="sr-only">Toggle navigation</span>
@@ -317,23 +321,23 @@ if ($user['jmluser'] == "0") {
                             </a>
                         </li>
                         <li>
-                            <a href="kategori.php">
-                                <i class="fa fa-list-alt"></i> <span>Categories</span>
+                            <a href="stock.php">
+                                <i class="fa fa-exchange"></i> <span>Stock Transfer</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="product.php">
+                                <i class="fa fa-list-alt"></i> <span>Products</span>
                             </a>
                         </li>
                         <li>
                             <a href="order.php">
-                                <i class="fa fa-th"></i> <span>Orders</span>
+                                <i class="fa fa-th"></i> <span>Request</span>
                             </a>
                         </li>
                         <li class="active">
                             <a href="history_order.php">
-                                <i class="fa fa-history" aria-hidden="true"></i> <span>Order History</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="cuti.php">
-                                <i class="fa fa-suitcase"></i> <span>Leave</span>
+                                <i class="fa fa-archive"></i> <span>Request History</span>
                             </a>
                         </li>
                         <li>
@@ -348,8 +352,8 @@ if ($user['jmluser'] == "0") {
             <aside class="right-side">
                 <section class="content-header">
                     <h1>
-                        Order History
-                        <small>Blitar Branch</small>
+                        Request History
+                        <small>View and Manage Request History</small>
                     </h1>
                     <ol class="breadcrumb">
                         <li><a href="index.php"><i class="fa fa-dashboard"></i> Home</a></li>
@@ -366,33 +370,45 @@ if ($user['jmluser'] == "0") {
                                     <button id="exportPDF" class="btn btn-danger" title="Download as PDF"><i class="fa fa-file-pdf-o"></i> PDF</button>
                             
                                 <form method="get" action="history_order.php" class="form-inline">
+                                    <select name="cabang" class="form-control">
+                                        <option value="">All Warehouse</option>
+                                        <option value="Ambon" <?php echo ($cabang_filter == 'Ambon' ? 'selected' : ''); ?>>Ambon</option>
+                                        <option value="Cikarang" <?php echo ($cabang_filter == 'Cikarang' ? 'selected' : ''); ?>>Cikarang</option>
+                                        <option value="Medan" <?php echo ($cabang_filter == 'Medan' ? 'selected' : ''); ?>>Medan</option>
+                                        <option value="Blitar" <?php echo ($cabang_filter == 'Blitar' ? 'selected' : ''); ?>>Blitar</option>
+                                        <option value="Surabaya" <?php echo ($cabang_filter == 'Surabaya' ? 'selected' : ''); ?>>Surabaya</option>
+                                    </select>
                                     <select name="status" class="form-control">
-                                        <option value="">All Statuses</option>
-                                        <option value="pending" <?php echo (isset($_GET['status']) && $_GET['status'] == 'pending' ? 'selected' : ''); ?>>Pending</option>
-                                        <option value="1" <?php echo (isset($_GET['status']) && $_GET['status'] == '1' ? 'selected' : ''); ?>>Accepted</option>
-                                        <option value="2" <?php echo (isset($_GET['status']) && $_GET['status'] == '2' ? 'selected' : ''); ?>>Declined</option>
+                                        <option value="">All Status</option>
+                                        <option value="pending" <?php echo ($status_filter == 'pending' ? 'selected' : ''); ?>>Pending</option>
+                                        <option value="1" <?php echo ($status_filter == '1' ? 'selected' : ''); ?>>Accepted</option>
+                                        <option value="2" <?php echo ($status_filter == '2' ? 'selected' : ''); ?>>Declined</option>
                                     </select>
                             
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fa fa-filter"></i> Filter
                                     </button>
-                                    <?php if(isset($_GET['status'])): ?>
+                                    <?php if(isset($_GET['status']) || isset($_GET['cabang'])): ?>
                                         <a href="history_order.php" class="btn btn-default">
                                             <i class="fa fa-times"></i> Clear
                                         </a>
                                     <?php endif; ?>
-                                    
                                 </form>
                             </div>
                             <div class="total-records">
                                 <?php
-                                $count_query = "SELECT COUNT(*) as total FROM pemesanan WHERE cabang = 'Blitar'";
-                                if (isset($_GET['status']) && $_GET['status'] != '') {
-                                    $status = mysqli_real_escape_string($mysqli, $_GET['status']);
-                                    $count_query .= " AND status = '$status'";
-                                } else {
-                                    $count_query .= " AND status IN ('1', '2')";
+                                $count_query = "SELECT COUNT(*) as total FROM pemesanan WHERE 1=1";
+                                
+                                if ($cabang_filter != '') {
+                                    $count_query .= " AND cabang = '$cabang_filter'";
                                 }
+                                
+                                if ($status_filter != '') {
+                                    $count_query .= " AND status = '$status_filter'";
+                                } else {
+                                    $count_query .= " AND status IN ('1', '2', 'pending')";
+                                }
+                                
                                 $count_result = mysqli_query($mysqli, $count_query);
                                 $count_row = mysqli_fetch_assoc($count_result);
                                 echo "<span class='badge bg-blue'>{$count_row['total']} records found</span>";
@@ -412,6 +428,7 @@ if ($user['jmluser'] == "0") {
                                         <th>Quantity</th>
                                         <th>Unit</th>
                                         <th>Supplier</th>
+                                        <th>Warehouse</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -420,18 +437,20 @@ if ($user['jmluser'] == "0") {
                                     $query = "SELECT p.*, s.Nama as supplier_name 
                                             FROM pemesanan p
                                             LEFT JOIN supplier s ON p.id_supplier = s.id_supplier
-                                            WHERE p.cabang = 'Blitar'";
+                                            WHERE 1=1";
                                     
-                                    if (isset($_GET['status']) && $_GET['status'] != '') {
-                                        $status = mysqli_real_escape_string($mysqli, $_GET['status']);
-                                        $query .= " AND p.status = '$status'";
+                                    if ($cabang_filter != '') {
+                                        $query .= " AND p.cabang = '$cabang_filter'";
+                                    }
+                                    
+                                    if ($status_filter != '') {
+                                        $query .= " AND p.status = '$status_filter'";
                                     } else {
-                                        $query .= " AND p.status IN ('1', '2')";
+                                        $query .= " AND p.status IN ('1', '2', 'pending')";
                                     }
                                     
                                     $query .= " ORDER BY p.tanggal DESC";
                                     
-                                    // Add simple pagination
                                     $per_page = 15;
                                     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
                                     $start = ($page - 1) * $per_page;
@@ -451,6 +470,7 @@ if ($user['jmluser'] == "0") {
                                                 <td>{$row['jumlah']}</td>
                                                 <td>{$row['satuan']}</td>
                                                 <td>".($row['supplier_name'] ? $row['supplier_name'] : 'N/A')."</td>
+                                                <td>{$row['cabang']}</td>
                                                 <td>";
                                             
                                             if ($row['status'] == '1') {
@@ -467,7 +487,7 @@ if ($user['jmluser'] == "0") {
                                         }
                                     } else {
                                         echo "<tr>
-                                            <td colspan='9'>
+                                            <td colspan='10'>
                                                 <div class='empty-state'>
                                                     <i class='fa fa-inbox'></i>
                                                     <h4>No Order History Found</h4>
@@ -486,20 +506,26 @@ if ($user['jmluser'] == "0") {
                                 <?php
                                 $total_pages = ceil($count_row['total'] / $per_page);
                                 
-                                // Previous button
                                 if ($page > 1) {
-                                    echo "<li><a href='history_order.php?page=".($page-1).(isset($_GET['status']) ? "&status={$_GET['status']}" : "")."'>&laquo;</a></li>";
+                                    echo "<li><a href='history_order.php?page=".($page-1).
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        ($status_filter ? "&status=$status_filter" : "").
+                                        "'>&laquo;</a></li>";
                                 }
                                 
-                                // Page numbers
                                 for ($i = 1; $i <= $total_pages; $i++) {
                                     $active = ($i == $page) ? "active" : "";
-                                    echo "<li class='$active'><a href='history_order.php?page=$i".(isset($_GET['status']) ? "&status={$_GET['status']}" : "")."'>$i</a></li>";
+                                    echo "<li class='$active'><a href='history_order.php?page=$i".
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        ($status_filter ? "&status=$status_filter" : "").
+                                        "'>$i</a></li>";
                                 }
                                 
-                                // Next button
                                 if ($page < $total_pages) {
-                                    echo "<li><a href='history_order.php?page=".($page+1).(isset($_GET['status']) ? "&status={$_GET['status']}" : "")."'>&raquo;</a></li>";
+                                    echo "<li><a href='history_order.php?page=".($page+1).
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        ($status_filter ? "&status=$status_filter" : "").
+                                        "'>&raquo;</a></li>";
                                 }
                                 ?>
                             </ul>
@@ -508,8 +534,6 @@ if ($user['jmluser'] == "0") {
                 </section>
             </aside>
         </div>
-        <!-- Export Buttons -->
-
         <!-- SheetJS & jsPDF CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

@@ -18,5 +18,5 @@ if ($stmt = $mysqli->prepare("DELETE FROM kategori WHERE id = ?")) { // Replace 
 	$stmt->close();
 }
 
-header("location:kategori.php");
+header("location:product.php");
 ?>

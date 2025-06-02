@@ -30,7 +30,12 @@ header("location:../index.php");
         <!-- bootstrap wysihtml5 - text editor -->
         <link href="../css/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css" rel="stylesheet" type="text/css" />
         <!-- Theme style -->
+       <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
+        <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+        <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+        <link href="../css/ionicons.min.css" rel="stylesheet" type="text/css" />
         <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
+        <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" /> 
 
         <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -44,7 +49,7 @@ header("location:../index.php");
         <header class="header">
             <a href="index.html" class="logo">
                 <!-- Add the class icon to your logo image or logo icon to add the margining -->
-                E-pharm
+                U-PSN
             </a>
             <!-- Header Navbar: style can be found in header.less -->
             <nav class="navbar navbar-static-top" role="navigation">

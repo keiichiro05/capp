@@ -10,9 +10,9 @@ header("Referrer-Policy: no-referrer");
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>E-pharm | Log in</title>
+    <title>U-PSN | Log in</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="E-pharm Login Portal">
+    <meta name="description" content="U-PSN Login Portal">
     
     <!-- Favicon -->
     <link rel="icon" href="img/favicon.ico" type="image/x-icon">
@@ -29,7 +29,7 @@ header("Referrer-Policy: no-referrer");
         <!-- Left Section with Background Image -->
         <div class="left-section">
             <div class="text-white position-relative text-center p-4">
-                <h2 class="display-5 fw-bold mb-4">Welcome to E-pharm</h2>
+                <h2 class="display-5 fw-bold mb-4">Welcome to U-PSN</h2>
                 <p class="lead">Your trusted pharmaceutical network</p>
             </div>
         </div>
@@ -45,7 +45,7 @@ header("Referrer-Policy: no-referrer");
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-user"></i></span>
                             <input type="text" id="userid" name="userid" class="form-control" 
-                                   placeholder="User ID" required aria-label="User ID">
+                                   placeholder="UserName" required aria-label="UserName">
                         </div>
                     </div>
                     

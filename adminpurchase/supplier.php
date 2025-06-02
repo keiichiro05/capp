@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['nama_kategori'])) {
                             </a>
                         </li>
                         <li>
-                            <a href="kategori.php">
+                            <a href="product.php">
                                 <i class="fa fa-list-alt"></i> <span>Category</span>
                             </a>
                         </li>
@@ -146,8 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['nama_kategori'])) {
                                 <td>{$baris['id']}</td>
                                 <td>{$baris['nama_kategori']}</td>
                                 <td>
-                                    <a href='edit_kategori.php?id={$baris['id']}' class='btn btn-warning'>Edit</a>
-                                    <a href='hapus_kategori.php?id={$baris['id']}' class='btn btn-danger' onclick='return confirm(\"Yakin ingin menghapus kategori ini?\")'>Hapus</a>
+                                    <a href='edit_product.php?id={$baris['id']}' class='btn btn-warning'>Edit</a>
+                                    <a href='hapus_product.php?id={$baris['id']}' class='btn btn-danger' onclick='return confirm(\"Yakin ingin menghapus kategori ini?\")'>Hapus</a>
                                 </td>
                             </tr>";
                         }

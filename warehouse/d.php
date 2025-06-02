@@ -147,7 +147,7 @@ if(!isset($_SESSION['username'])){
                                 </a>
                             </li>
                             <li>
-                                <a href="kategori.php">
+                                <a href="product.php">
                                     <i class="fa fa-list-alt"></i> <span>Category</span>
                                 </a>
                             </li>

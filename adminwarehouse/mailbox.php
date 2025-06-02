@@ -41,135 +41,375 @@ if ($user['jmluser'] == "0") {
 
     $name = mysqli_query($conn, "SELECT nama FROM pegawai p, authorization a WHERE a.id_pegawai = p.id_pegawai AND a.username NOT LIKE '$username'");
 ?>
-
-
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Admin Warehouse | E-pharm</title>
-        <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-        <!-- bootstrap 3.0.2 -->
-        <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-        <!-- font Awesome -->
-        <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-        <!-- Ionicons -->
-        <link href="../css/ionicons.min.css" rel="stylesheet" type="text/css" />
-        <!-- Morris chart -->
-        <link href="../css/morris/morris.css" rel="stylesheet" type="text/css" />
-        <!-- jvectormap -->
-        <link href="../css/jvectormap/jquery-jvectormap-1.2.2.css" rel="stylesheet" type="text/css" />
-        <!-- fullCalendar -->
-        <link href="../css/fullcalendar/fullcalendar.css" rel="stylesheet" type="text/css" />
-        <!-- Daterange picker -->
-        <link href="../css/daterangepicker/daterangepicker-bs3.css" rel="stylesheet" type="text/css" />
-        <!-- bootstrap wysihtml5 - text editor -->
-        <link href="../css/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css" rel="stylesheet" type="text/css" />
-        <!-- Theme style -->
-        <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
-        <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" />
-
-        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-        <!--[if lt IE 9]>
-          <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-          <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-    </head>
-    <body class="skin-blue">
-        <header class="header">
-            <a href="index.html" class="logo">Admin Warehouse</a>
-                <div class="navbar-right">
-                    <ul class="nav navbar-nav">
-                        <li class="dropdown user user-menu">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                                <i class="glyphicon glyphicon-user"></i>
-                                <span><?php echo $username; ?><i class="caret"></i></span>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li class="user-header bg-light-blue">
-                                    <img src="img/<?php echo $pegawai['foto']; ?>" class="img-circle" alt="User Image" />
-                                    <p>
-                                        <?php
-                                        echo $pegawai['Nama'] . " - " . $pegawai['Jabatan'] . " " . $pegawai['Departemen']; ?>
-                                        <small>Member since <?php echo "$pegawai[Tanggal_Masuk]"; ?></small>
-                                    </p>
-                                </li>
-                                <li class="user-body">
-                                    <div class="col-xs-4 text-center">
-                                        <a href="#">Admin</a>
-                                    </div>
-                                    <div class="col-xs-4 text-center">
-                                        <a href="#">Warehouse</a>
-                                    </div>
-                                    <div class="col-xs-4 text-center">
-                                        <a href="#"></a>
-                                    </div>
-                                </li>
-                                <li class="user-footer">
-                                    <div class="pull-left">
-                                        <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
-                                    </div>
-                                    <div class="pull-right">
-                                        <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
-                                    </div>
-                                </li>
-                            </ul>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Manager Dashboard</title>
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+    <link href="../css/font-awesome.min.css" rel="stylesheet">
+    <link href="../css/AdminLTE.css" rel="stylesheet">
+    <link href="../css/modern-3d.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4e73df;
+            --success: #1cc88a;
+            --info: #36b9cc;
+            --warning: #f6c23e;
+            --danger: #e74a3b;
+            --dark: #5a5c69;
+            --light: #f8f9fc;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fc;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard-header h1 {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .dashboard-header h1 small {
+            color: rgba(255,255,255,0.7);
+            font-size: 16px;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        .header-date-time {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .header-date-time i {
+            margin-right: 5px;
+        }
+        
+        .small-box {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: none;
+            overflow: hidden;
+        }
+        
+        .small-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .small-box .inner {
+            padding: 15px;
+        }
+        
+        .small-box h3 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 5px 0;
+        }
+        
+        .small-box p {
+            font-size: 15px;
+            margin-bottom: 0;
+        }
+        
+        .small-box .icon {
+            font-size: 70px;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            transition: all 0.3s;
+            opacity: 0.2;
+        }
+        
+        .small-box:hover .icon {
+            opacity: 0.3;
+            transform: scale(1.1);
+        }
+        
+        .small-box-footer {
+            background: rgba(0,0,0,0.05);
+            color: rgba(255,255,255,0.8);
+            display: block;
+            padding: 8px 0;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .small-box-footer:hover {
+            background: rgba(0,0,0,0.1);
+            color: white;
+        }
+        
+        .box {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .box-header {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            padding: 15px 20px;
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .box-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            display: inline-block;
+        }
+        
+        .box-header .box-tools {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+        
+        .box-body {
+            padding: 20px;
+            background-color: white;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .alert-item {
+            border-left: 4px solid var(--danger);
+            margin-bottom: 10px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            padding: 10px 15px;
+        }
+        
+        .alert-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stock-critical {
+            background-color: #f8d7da;
+            border-left-color: var(--danger);
+        }
+        
+        .stock-warning {
+            background-color: #fff3cd;
+            border-left-color: var(--warning);
+        }
+        
+        .products-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .products-list .item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .products-list .item:last-child {
+            border-bottom: none;
+        }
+        
+        .product-title {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .product-description {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .sidebar-menu > li > a {
+            border-radius: 5px;
+            margin: 5px 10px;
+        }
+        
+        .sidebar-menu > li.active > a {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .sidebar-menu > li > a:hover {
+            background-color: rgba(78, 115, 223, 0.1);
+        }
+        
+        .user-panel {
+            padding: 15px;
+        }
+        
+        .skin-blue .sidebar-menu > li:hover > a, 
+        .skin-blue .sidebar-menu > li.active > a {
+            color: white;
+            background: var(--primary);
+            border-left-color: var(--primary);
+        }
+        
+        .info-box {
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        
+        .info-box-icon {
+            border-radius: 8px 0 0 8px;
+            display: block;
+            float: left;
+            height: 90px;
+            width: 90px;
+            text-align: center;
+            font-size: 45px;
+            line-height: 90px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .info-box-content {
+            padding: 15px;
+            margin-left: 90px;
+        }
+        
+        .info-box-text {
+            display: block;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .info-box-number {
+            display: block;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        
+        .progress-description {
+            display: block;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .bg-primary { background-color: var(--primary) !important; }
+        .bg-success { background-color: var(--success) !important; }
+        .bg-info { background-color: var(--info) !important; }
+        .bg-warning { background-color: var(--warning) !important; }
+        .bg-danger { background-color: var(--danger) !important; }
+        .bg-purple { background-color: #6f42c1 !important; }
+        
+        .text-primary { color: var(--primary) !important; }
+        .text-success { color: var(--success) !important; }
+        .text-info { color: var(--info) !important; }
+        .text-warning { color: var(--warning) !important; }
+        .text-danger { color: var(--danger) !important; }
+        
+        .label-primary { background-color: var(--primary) !important; }
+        .label-success { background-color: var(--success) !important; }
+        .label-info { background-color: var(--info) !important; }
+        .label-warning { background-color: var(--warning) !important; }
+        .label-danger { background-color: var(--danger) !important; }
+    </style>
+</head>
+<body class="skin-blue">
+    <header class="header">
+        <a href="#" class="logo">Warehouse Manager</a>
+        <div class="navbar-right">
+            <ul class="nav navbar-nav">
+                <li class="dropdown user user-menu">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        <i class="glyphicon glyphicon-user"></i>
+                        <span><?php echo htmlspecialchars($username); ?> <i class="caret"></i></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="user-header bg-light-blue">
+                            <img src="../img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
+                            <p>
+                                <?php echo htmlspecialchars($pegawai['Nama'] . " - " . $pegawai['Jabatan']); ?>
+                                <small>Member since <?php echo htmlspecialchars($pegawai['Tanggal_Masuk']); ?></small>
+                            </p>
+                        </li>
+                        <li class="user-footer">
+                            <div class="pull-left">
+                                <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
+                            </div>
+                            <div class="pull-right">
+                                <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
+                            </div>
                         </li>
                     </ul>
-                </div>
-            </nav>
-        </header>
-        <div class="wrapper row-offcanvas row-offcanvas-left">
-            <!-- Left side column. contains the logo and sidebar -->
-            <aside class="left-side sidebar-offcanvas">
-                <!-- sidebar: style can be found in sidebar.less -->
-                <section class="sidebar">
-                    <!-- Sidebar user panel -->
-                    <div class="user-panel">
-                        <div class="pull-left image">
-                          <img src="img/<?php echo $pegawai['foto'];?>" class="img-circle" alt="User Image" />
-                               </div>
-                        <div class="pull-left info">
-                            <p>Hello, <?php echo $username;?></p>
-
-                            <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                        </div>
+                </li>
+            </ul>
+        </div>
+    </header>
+    <div class="wrapper row-offcanvas row-offcanvas-left">
+        <aside class="left-side sidebar-offcanvas">
+            <section class="sidebar">
+                <div class="user-panel">
+                    <div class="pull-left image">
+                        <img src="../img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
                     </div>
-                    <!-- /.search form -->
-                    <!-- sidebar menu: : style can be found in sidebar.less -->
-                    <ul class="sidebar-menu">
+                    <div class="pull-left info">
+                        <p>Hello, <?php echo htmlspecialchars($username); ?></p>
+                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
+                    </div>
+                </div>
+                <ul class="sidebar-menu">
                     <li>
-                            <a href="dashboard.php">
-                                <i class="fa fa-dashboard"></i> <span>Dashboard</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="index.php">
-                                <i class="fa fa-list"></i> <span>List Order</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="daftarACC.php">
-                                <i class="fa fa-th"></i> <span>Order History</span>
-                            </a>
-                        </li>
-                        <li class="active">
-                            <a href="cuti.php">
-                                <i class="fa fa-suitcase"></i> <span>Leave</span>
-                            </a>
-                        </li>
-						 <li>
-                            <a href="mailbox.php">
-                                <i class="fa fa-comments"></i> <span>Mailbox</span>
-								
-                            </a>
-                        </li>
-                    </ul>
-                </section>
-                <!-- /.sidebar -->
-            </aside>
-
+                        <a href="streamlit.php">
+                            <i class="fa fa-signal"></i> <span>Analytics</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="dashboard.php">
+                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="list_request.php">
+                            <i class="fa fa-list"></i> <span>List Request</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="daftarACC.php">
+                            <i class="fa fa-history"></i> <span>Request History</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stock.php">
+                            <i class="fa fa-cube"></i> <span>Inventory</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="mailbox.php">
+                            <i class="fa fa-envelope"></i> <span>Mailbox</span>
+                        </a>
+                    </li>
+                </ul>
+            </section>
+        </aside>
             <!-- Right side column. Contains the navbar and content of the page -->
             <aside class="right-side">
                 <!-- Content Header (Page header) -->

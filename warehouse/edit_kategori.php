@@ -19,7 +19,7 @@ $pegawai = mysqli_fetch_assoc($getpegawai);
 
 // Check if ID parameter exists and is valid
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header("location:kategori.php");
+    header("location:product.php");
     exit;
 }
 
@@ -34,7 +34,7 @@ if ($stmt = $mysqli->prepare("SELECT nama_kategori FROM kategori WHERE id = ?"))
     $stmt->bind_result($categoryName);
     if (!$stmt->fetch()) {
         // Category not found
-        header("location:kategori.php");
+        header("location:product.php");
         exit;
     }
     $stmt->close();
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($update_stmt->execute()) {
                         $message = '<div class="alert alert-success">Category updated successfully! Redirecting...</div>';
                         // Redirect after 2 seconds to show success message
-                        header("refresh:2;url=kategori.php");
+                        header("refresh:2;url=product.php");
                     } else {
                         $message = '<div class="alert alert-danger">Error updating category: '.$mysqli->error.'</div>';
                     }
@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </a>
                     </li>
                     <li>
-                        <a href="kategori.php">
+                        <a href="product.php">
                             <i class="fa fa-list-alt"></i> <span>Categories</span>
                         </a>
                     </li>
@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1>Edit Category</h1>
                 <ol class="breadcrumb">
                     <li><a href="index.php"><i class="fa fa-dashboard"></i> Home</a></li>
-                    <li><a href="kategori.php">Categories</a></li>
+                    <li><a href="product.php">Categories</a></li>
                     <li class="active">Edit Category</li>
                 </ol>
             </section>
@@ -239,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         
                         <div class="form-group">
-                            <a href="kategori.php" class="btn btn-default btn-back">
+                            <a href="product.php" class="btn btn-default btn-back">
                                 <i class="fa fa-arrow-left"></i> Back
                             </a>
                             <button type="submit" class="btn btn-primary">

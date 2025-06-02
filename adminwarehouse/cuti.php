@@ -1,12 +1,5 @@
 <?php
 session_start();
-
-// Cek apakah user sudah login
-if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
-    header("Location: ../index.php?status=Please Login First");
-    exit();
-}
-
 require_once('../konekdb.php');
 
 $username = $_SESSION['username'];
@@ -28,7 +21,7 @@ if ($user['jmluser'] == "0") {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Admin Warehouse</title>
+        <title>Warehouse Manager </title>
         <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
         <!-- bootstrap 3.0.2 -->
         <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
@@ -59,7 +52,7 @@ if ($user['jmluser'] == "0") {
     </head>
     <body class="skin-blue">
         <header class="header">
-            <a href="index.html" class="logo">Admin Warehouse</a>
+            <a href="index.html" class="logo">Warehouse Manager </a>
                 <div class="navbar-right">
                     <ul class="nav navbar-nav">
                         <li class="dropdown user user-menu">
@@ -127,7 +120,7 @@ if ($user['jmluser'] == "0") {
                         </li>
                         <li>
                             <a href="index.php">
-                                <i class="fa fa-list"></i> <span>List Order</span>
+                                <i class="fa fa-list"></i> <span>List Request From Warehouse</span>
                             </a>
                         </li>
                         <li>

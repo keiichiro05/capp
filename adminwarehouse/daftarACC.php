@@ -34,203 +34,369 @@ $column_check = mysqli_query($mysqli, "SHOW COLUMNS FROM pemesanan LIKE 'tanggal
 $date_column_exists = (mysqli_num_rows($column_check) > 0);
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Warehouse</title>
-    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <!-- bootstrap 3.0.2 -->
-    <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-    <!-- font Awesome -->
-    <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-    <!-- Ionicons -->
-    <link href="../css/ionicons.min.css" rel="stylesheet" type="text/css" />
-    <!-- DataTables -->
-    <link href="../css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-    <!-- Theme style -->
-    <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
-    <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Manager Dashboard</title>
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+    <link href="../css/font-awesome.min.css" rel="stylesheet">
+    <link href="../css/AdminLTE.css" rel="stylesheet">
+    <link href="../css/modern-3d.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        .order-history-container {
-            background: #fff;
+        :root {
+            --primary: #4e73df;
+            --success: #1cc88a;
+            --info: #36b9cc;
+            --warning: #f6c23e;
+            --danger: #e74a3b;
+            --dark: #5a5c69;
+            --light: #f8f9fc;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fc;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
+            color: white;
             padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-        }
-        
-        .filter-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
-        .filter-form {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .order-history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .order-history-table th {
-            background-color:rgb(6, 57, 134);
-            padding: 12px 15px;
-            text-align: left;
+        .dashboard-header h1 {
             font-weight: 600;
-            border-bottom: 2px solid #ddd;
+            margin-bottom: 5px;
         }
         
-        .order-history-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
+        .dashboard-header h1 small {
+            color: rgba(255,255,255,0.7);
+            font-size: 16px;
+            display: block;
+            margin-top: 5px;
         }
         
-        .order-history-table tr:hover {
-            background-color: #f9f9f9;
+        .header-date-time {
+            font-size: 14px;
+            opacity: 0.9;
         }
         
-        .order-history-table tr:nth-child(even) {
-            background-color: #fafafa;
+        .header-date-time i {
+            margin-right: 5px;
         }
         
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-weight: bold;
-            font-size: 12px;
+        .small-box {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: none;
+            overflow: hidden;
+        }
+        
+        .small-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .small-box .inner {
+            padding: 15px;
+        }
+        
+        .small-box h3 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 5px 0;
+        }
+        
+        .small-box p {
+            font-size: 15px;
+            margin-bottom: 0;
+        }
+        
+        .small-box .icon {
+            font-size: 70px;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            transition: all 0.3s;
+            opacity: 0.2;
+        }
+        
+        .small-box:hover .icon {
+            opacity: 0.3;
+            transform: scale(1.1);
+        }
+        
+        .small-box-footer {
+            background: rgba(0,0,0,0.05);
+            color: rgba(255,255,255,0.8);
+            display: block;
+            padding: 8px 0;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .small-box-footer:hover {
+            background: rgba(0,0,0,0.1);
+            color: white;
+        }
+        
+        .box {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .box-header {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            padding: 15px 20px;
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .box-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
             display: inline-block;
         }
         
-        .status-pending {
-            background-color: #f39c12;
+        .box-header .box-tools {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+        
+        .box-body {
+            padding: 20px;
+            background-color: white;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .alert-item {
+            border-left: 4px solid var(--danger);
+            margin-bottom: 10px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            padding: 10px 15px;
+        }
+        
+        .alert-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stock-critical {
+            background-color: #f8d7da;
+            border-left-color: var(--danger);
+        }
+        
+        .stock-warning {
+            background-color: #fff3cd;
+            border-left-color: var(--warning);
+        }
+        
+        .products-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .products-list .item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .products-list .item:last-child {
+            border-bottom: none;
+        }
+        
+        .product-title {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .product-description {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .sidebar-menu > li > a {
+            border-radius: 5px;
+            margin: 5px 10px;
+        }
+        
+        .sidebar-menu > li.active > a {
+            background-color: var(--primary);
             color: white;
         }
         
-        .status-accepted {
-            background-color: #00a65a;
+        .sidebar-menu > li > a:hover {
+            background-color: rgba(78, 115, 223, 0.1);
+        }
+        
+        .user-panel {
+            padding: 15px;
+        }
+        
+        .skin-blue .sidebar-menu > li:hover > a, 
+        .skin-blue .sidebar-menu > li.active > a {
             color: white;
+            background: var(--primary);
+            border-left-color: var(--primary);
         }
         
-        .status-declined {
-            background-color: #dd4b39;
-            color: white;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px 0;
-            color: #777;
-        }
-        
-        .empty-state i {
-            font-size: 50px;
+        .info-box {
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-bottom: 15px;
-            color: #ddd;
         }
         
-        .empty-state h4 {
-            margin: 10px 0;
+        .info-box-icon {
+            border-radius: 8px 0 0 8px;
+            display: block;
+            float: left;
+            height: 90px;
+            width: 90px;
+            text-align: center;
+            font-size: 45px;
+            line-height: 90px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .info-box-content {
+            padding: 15px;
+            margin-left: 90px;
+        }
+        
+        .info-box-text {
+            display: block;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .info-box-number {
+            display: block;
+            font-size: 22px;
             font-weight: 600;
         }
         
-        .order-date {
-            white-space: nowrap;
+        .progress-description {
+            display: block;
+            font-size: 12px;
+            margin-top: 5px;
         }
         
-        .total-records .badge {
-            padding: 5px 10px;
-            font-size: 12px;
-            border-radius: 10px;
-        }
-    </style>    
+        .bg-primary { background-color: var(--primary) !important; }
+        .bg-success { background-color: var(--success) !important; }
+        .bg-info { background-color: var(--info) !important; }
+        .bg-warning { background-color: var(--warning) !important; }
+        .bg-danger { background-color: var(--danger) !important; }
+        .bg-purple { background-color: #6f42c1 !important; }
+        
+        .text-primary { color: var(--primary) !important; }
+        .text-success { color: var(--success) !important; }
+        .text-info { color: var(--info) !important; }
+        .text-warning { color: var(--warning) !important; }
+        .text-danger { color: var(--danger) !important; }
+        
+        .label-primary { background-color: var(--primary) !important; }
+        .label-success { background-color: var(--success) !important; }
+        .label-info { background-color: var(--info) !important; }
+        .label-warning { background-color: var(--warning) !important; }
+        .label-danger { background-color: var(--danger) !important; }
+    </style>
 </head>
-
 <body class="skin-blue">
     <header class="header">
-        <a href="index.html" class="logo">Admin Warehouse</a>
-            <div class="navbar-right">
-                <ul class="nav navbar-nav">
-                    <li class="dropdown user user-menu">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                            <i class="glyphicon glyphicon-user"></i>
-                            <span><?php echo $username; ?><i class="caret"></i></span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li class="user-header bg-light-blue">
-                                <img src="img/<?php echo $pegawai['foto']; ?>" class="img-circle" alt="User Image" />
-                                <p>
-                                    <?php
-                                    echo $pegawai['Nama'] . " - " . $pegawai['Jabatan'] . " " . $pegawai['Departemen']; ?>
-                                    <small>Member since <?php echo "$pegawai[Tanggal_Masuk]"; ?></small>
-                                </p>
-                            </li>
-                            <li class="user-body">
-                                <div class="col-xs-4 text-center">
-                                    <a href="#">Admin</a>
-                                </div>
-                                <div class="col-xs-4 text-center">
-                                    <a href="#">Warehouse</a>
-                                </div>
-                                <div class="col-xs-4 text-center">
-                                    <a href="#"></a>
-                                </div>
-                            </li>
-                            <li class="user-footer">
-                                <div class="pull-left">
-                                    <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
-                                </div>
-                                <div class="pull-right">
-                                    <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
-                                </div>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+        <a href="#" class="logo">Warehouse Manager</a>
+        <div class="navbar-right">
+            <ul class="nav navbar-nav">
+                <li class="dropdown user user-menu">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        <i class="glyphicon glyphicon-user"></i>
+                        <span><?php echo htmlspecialchars($username); ?> <i class="caret"></i></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="user-header bg-light-blue">
+                            <img src="../img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
+                            <p>
+                                <?php echo htmlspecialchars($pegawai['Nama'] . " - " . $pegawai['Jabatan']); ?>
+                                <small>Member since <?php echo htmlspecialchars($pegawai['Tanggal_Masuk']); ?></small>
+                            </p>
+                        </li>
+                        <li class="user-footer">
+                            <div class="pull-left">
+                                <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
+                            </div>
+                            <div class="pull-right">
+                                <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
     </header>
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <aside class="left-side sidebar-offcanvas">
             <section class="sidebar">
                 <div class="user-panel">
                     <div class="pull-left image">
-                        <img src="img/<?php echo $pegawai['foto']; ?>" class="img-circle" alt="User Image" />
+                        <img src="../img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
-                        <p>Hello, <?php echo $username; ?></p>
+                        <p>Hello, <?php echo htmlspecialchars($username); ?></p>
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
                 <ul class="sidebar-menu">
+                    <li>
+                        <a href="streamlit.php">
+                            <i class="fa fa-signal"></i> <span>Analytics</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="dashboard.php">
                             <i class="fa fa-dashboard"></i> <span>Dashboard</span>
                         </a>
                     </li>
                     <li>
-                        <a href="index.php">
-                            <i class="fa fa-list"></i> <span>List Order</span>
+                        <a href="list_request.php">
+                            <i class="fa fa-list"></i> <span>List Request</span>
                         </a>
                     </li>
                     <li class="active">
                         <a href="daftarACC.php">
-                            <i class="fa fa-th"></i> <span>Order History</span>
+                            <i class="fa fa-history"></i> <span>Request History</span>
                         </a>
                     </li>
                     <li>
-                        <a href="cuti.php">
-                            <i class="fa fa-suitcase"></i> <span>Leave</span>
+                        <a href="stock.php">
+                            <i class="fa fa-cubes"></i> <span>Inventory</span>
                         </a>
                     </li>
                     <li>
                         <a href="mailbox.php">
-                            <i class="fa fa-comments"></i> <span>Mailbox</span>
+                            <i class="fa fa-envelope"></i> <span>Mailbox</span>
                         </a>
                     </li>
                 </ul>
@@ -240,11 +406,10 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
         <aside class="right-side">
             <section class="content-header">
                 <h1>
-                    Approved Orders
-                    <small>Admin Warehouse</small>
+                    Request History
+                    <small>Warehouse Manager </small>
                 </h1>
             </section>
-
             <section class="content">
                 <?php
                 if (isset($_SESSION['message'])) {
@@ -255,7 +420,6 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
                     unset($_SESSION['message']);
                 }
                 ?>
-
                 <div class="order-history-container">
                     <div class="filter-container">
                         <div class="filter-form">
@@ -292,9 +456,9 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
                             ?>
                         </div>
                     </div>
-                    
+
                     <div class="table-responsive">
-                        <table class="order-history-table">
+                        <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
                                     <th>#</th>

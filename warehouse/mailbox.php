@@ -72,7 +72,7 @@ if(isset($_SESSION['username'])){
         <header class="header">
             <a href="index.php" class="logo">
                 <!-- Add the class icon to your logo image or logo icon to add the margining -->
-                PSN
+                Admin Warehouse
             </a>
             <!-- Header Navbar: style can be found in header.less -->
             <nav class="navbar navbar-static-top" role="navigation">
@@ -167,26 +167,27 @@ if(isset($_SESSION['username'])){
                                 <i class="fa fa-dashboard"></i> <span>Dashboard</span>
                             </a>
                         </li>
-                        <li>
-                            <a href="kategori.php">
-                                <i class="fa fa-list-alt"></i> <span>Categories</span>
+                         <li>
+                            <a href="stock.php">
+                                <i class="fa fa-exchange"></i> <span>Stock Transfer</span>
                             </a>
                         </li>
-                        <li >
+                        <li>
+                            <a href="product.php">
+                                <i class="fa fa-list-alt"></i> <span>Products</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="order.php">
-                                <i class="fa fa-th"></i> <span>Orders</span>
+                                <i class="fa fa-th"></i> <span>Request</span>
                             </a>
                         </li>
                         <li>
                             <a href="history_order.php">
-                                <i class="fa fa-history" aria-hidden="true"></i> <span>Order History</span>
+                                <i class="fa fa-archive"></i> <span>Request History</span>
                             </a>
                         </li>
-						<li >
-                            <a href="cuti.php">
-                                <i class="fa fa-suitcase"></i> <span>Leave</span>
-                            </a>
-                        </li>
+                        <li>
                          <li class="active">
                             <a href="mailbox.php">
                                 <i class="fa fa-comments"></i> <span>Mailbox</span>

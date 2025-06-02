@@ -3,7 +3,7 @@ session_start();
 
 // Validasi input awal
 if (empty($_POST['userid']) || empty($_POST['password'])) {
-    header("Location: index.php?status=Silakan isi username dan password");
+    header("Location: index.php?status=Please fill username and password");
     exit();
 }
 
@@ -25,7 +25,7 @@ $result = $sql->get_result();
 $record = $result->fetch_assoc();
 
 if (!$record) {
-    header("Location: index.php?status=Maaf, username dan password tidak valid");
+    header("Location: index.php?status=Sorry, username and password not valid");
     exit();
 }
 
@@ -57,7 +57,7 @@ switch ($record['modul']) {
         header("Location: superadmin/");
         break;
     default:
-        header("Location: index.php?status=Modul tidak dikenali");
+        header("Location: index.php?status=Modul not Found");
         break;
 }
 exit();

@@ -1,0 +1,126 @@
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 25px;
+    margin-bottom: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(67, 97, 238, 0.3);
+}
+
+.dashboard-header h1 {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.dashboard-header small {
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+.header-date-time {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.stat-card {
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card i {
+    font-size: 50px;
+    opacity: 0.2;
+    position: absolute;
+    right: 20px;
+    top: 20px;
+}
+
+.stat-card .count {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.stat-card .title {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.stat-card.orders {
+    background: linear-gradient(135deg, #7209b7 0%, #560bad 100%);
+}
+
+.stat-card.pending {
+    background: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+}
+
+.stat-card.approved {
+    background: linear-gradient(135deg, #4cc9f0 0%, #4895ef 100%);
+}
+
+.stat-card.stock {
+    background: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
+}
+
+.alert-item {
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background-color: white;
+    border-left: 4px solid;
+    transition: all 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.alert-item.critical {
+    border-left-color: var(--danger-color);
+    background-color: rgba(247, 37, 133, 0.05);
+}
+
+.alert-item.warning {
+    border-left-color: var(--warning-color);
+    background-color: rgba(247, 127, 0, 0.05);
+}
+
+.chart-container {
+    position: relative;
+    height: 250px;
+    width: 100%;
+}
+
+.recent-orders .order-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s;
+}
+
+.recent-orders .order-item:hover {
+    background-color: rgba(67, 97, 238, 0.05);
+}
+
+.order-status {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: rgba(247, 37, 133, 0.1);
+    color: var(--danger-color);
+}
+
+.status-approved {
+    background-color: rgba(76, 201, 240, 0.1);
+    color: var(--success-color);
+}
