@@ -151,12 +151,12 @@ header("location:../index.php");
                             </a>
                         </li>
                         <li >
-                            <a href="order.php">
+                            <a href="new_request.php">
                                 <i class="fa fa-th"></i> <span>Orders</span>
                             </a>
                         </li>
                         <li>
-                            <a href="history_order.php">
+                            <a href="history_request.php">
                                 <i class="fa fa-history" aria-hidden="true"></i> <span>Order History</span>
                             </a>
                         </li>

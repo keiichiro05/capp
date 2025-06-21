@@ -209,7 +209,7 @@ include('../partials/sidebar.php'); // Path is from warehouse/ to capp/partials/
                 <?php endif; ?>
             </div>
             <div class="card-footer text-center">
-                <a href="history_order.php" class="btn btn-sm btn-outline-primary">View All Requests</a>
+                <a href="history_request.php" class="btn btn-sm btn-outline-primary">View All Requests</a>
             </div>
         </div>
     </div>
@@ -249,7 +249,7 @@ include('../partials/sidebar.php'); // Path is from warehouse/ to capp/partials/
                             <a href="product.php" class="btn btn-primary">
                                 <i class="fas fa-plus me-2"></i> Add Product
                             </a>
-                            <a href="order.php" class="btn btn-outline-primary">
+                            <a href="new_request.php" class="btn btn-outline-primary">
                                 <i class="fas fa-clipboard-list me-2"></i> New Request
                             </a>
                             <a href="stock.php" class="btn btn-outline-primary">

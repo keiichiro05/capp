@@ -1,30 +1,54 @@
-<?php 
-include('../konekdb.php');
+<?php
 session_start();
+date_default_timezone_set('Asia/Jakarta');
 
-$username = $_SESSION['username'] ?? null;
-$idpegawai = $_SESSION['idpegawai'] ?? null;
-
-if(!isset($_SESSION['username'])){
-    header("location:../index.php?status=please login first");
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Please Login First");
     exit();
 }
-if (isset($_SESSION['idpegawai'])) {
-    $idpegawai = $_SESSION['idpegawai'];
-} else {
-    header("location:../index.php?status=please login first");
+
+require_once('../konekdb.php');
+
+$username   = $_SESSION['username'];
+$idpegawai  = $_SESSION['idpegawai'];
+
+// Check session timeout (30 menit)
+if (!isset($_SESSION['last_activity'])) {
+    $_SESSION['last_activity'] = time();
+} elseif (time() - $_SESSION['last_activity'] > 1800) {
+    session_unset();
+    session_destroy();
+    header("Location: ../index.php?status=Session expired");
     exit();
 }
-$cekuser = mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Warehouse'");
-$user = mysqli_fetch_assoc($cekuser);
+$_SESSION['last_activity'] = time();
 
-$getpegawai = mysqli_query($mysqli, "SELECT * FROM pegawai WHERE id_pegawai='$idpegawai'");
-$pegawai = mysqli_fetch_array($getpegawai);
+// Check user access to Adminwarehouse module
+$stmt = $mysqli->prepare("
+    SELECT COUNT(*) as user_count 
+    FROM authorization 
+    WHERE username = ? AND modul = 'Warehouse'
+");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
 
-if ($user['jmluser'] == "0") {
-    header("location:../index.php");
-    exit;
+if (empty($user['user_count']) || $user['user_count'] == 0) {
+    header("Location: ../index.php?status=Access Denied");
+    exit();
 }
+
+// Get employee data
+$stmtPegawai = $mysqli->prepare("SELECT * FROM pegawai WHERE id_pegawai = ?");
+$stmtPegawai->bind_param("i", $idpegawai);
+$stmtPegawai->execute();
+$resultPegawai = $stmtPegawai->get_result();
+$pegawai = $resultPegawai->fetch_assoc();
+
+// Check if 'tanggal' column exists in pemesanan
+$column_check = $mysqli->query("SHOW COLUMNS FROM pemesanan LIKE 'tanggal'");
+$date_column_exists = ($column_check && $column_check->num_rows > 0);
 
 date_default_timezone_set('Asia/Jakarta');
 $hour = date('H');
@@ -37,7 +61,7 @@ if ($hour < 12) {
 }
 
 // Fetch dashboard data
-$queryOrders = mysqli_query($mysqli, "SELECT COUNT(*) as totalOrders FROM dariwarehouse");
+$queryOrders = mysqli_query($mysqli, "SELECT COUNT(*) as totalOrders FROM warehouse");
 $ordersData = mysqli_fetch_array($queryOrders);
 $totalOrders = $ordersData['totalOrders'];
 
@@ -180,9 +204,9 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                 <div class="navbar-right">
                     <ul class="nav navbar-nav">
                         <li class="dropdown user user-menu">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                 <i class="glyphicon glyphicon-user"></i>
-                                <span><?php echo htmlspecialchars($username); ?><i class="caret"></i></span>
+                                <span><?php echo htmlspecialchars($username); ?> <i class="caret"></i></span>
                             </a>
                             <ul class="dropdown-menu">
                                 <li class="user-header bg-light-blue">
@@ -227,23 +251,32 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                         </li>
                         <li>
                             <a href="stock.php">
-                                <i class="fa fa-exchange"></i> <span>Stock Transfer</span>
+                                <i class="fa fa-folder"></i> <span>Stock</span>
                             </a>
                         </li>
-                  
+                        <li>
+                            <a href="movement.php">
+                                <i class="fa fa-exchange"></i> <span>Movement</span>
+                            </a>
+                        </li>
                         <li>
                             <a href="product.php">
                                 <i class="fa fa-list-alt"></i> <span>Products</span>
                             </a>
                         </li>
                         <li>
-                            <a href="order.php">
-                                <i class="fa fa-th"></i> <span>Request</span>
+                            <a href="new_request.php">
+                                <i class="fa fa-plus-square"></i> <span>New Request</span>
                             </a>
                         </li>
                         <li>
-                            <a href="history_order.php">
+                            <a href="history_request.php">
                                 <i class="fa fa-archive"></i> <span>Request History</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="sales_request.php">
+                                <i class="fa fa-retweet"></i> <span>Sales Request</span>
                             </a>
                         </li>
                         <li>
@@ -254,6 +287,20 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                     </ul>
                 </section>
             </aside>
+<!-- JS dependencies for Bootstrap and jQuery -->
+<script src="../js/jquery.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+<script>
+    // Enable sidebar toggle
+    $(function () {
+        $('[data-toggle="offcanvas"]').click(function (e) {
+            e.preventDefault();
+            $('.row-offcanvas').toggleClass('active');
+        });
+        // Dropdowns
+        $('.dropdown-toggle').dropdown();
+    });
+</script>
             <aside class="right-side">
             <section class="content-header custom-dashboard-header">
                 <div class="row">
@@ -269,12 +316,12 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                         <div class="small-box bg-yellow animate__animated animate__fadeIn">
                             <div class="inner">
                                 <h3><?php echo htmlspecialchars($totalOrders); ?></h3>
-                                <p>Total Request</p>
+                                <p>Inventory Stock</p>
                             </div>
                             <div class="icon">
                                 <i class="ion ion-bag"></i>
                             </div>
-                            <a href="history_order.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="stock.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     
@@ -287,12 +334,12 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                             <div class="icon">
                                 <i class="ion ion-clock"></i>
                             </div>
-                            <a href="history_order.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="new_request.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     <?php
                     // Use dariwarehouse table if history_order does not exist
-                    $queryAcceptedHistory = mysqli_query($mysqli, "SELECT COUNT(*) as acceptedHistory FROM pemesanan WHERE status = 1");
+                    $queryAcceptedHistory = mysqli_query($mysqli, "SELECT COUNT(*) as acceptedHistory FROM inventory_movement WHERE movement_type = 'inbound'");
                     $acceptedHistoryData = mysqli_fetch_array($queryAcceptedHistory);
                     $acceptedHistory = $acceptedHistoryData['acceptedHistory'];
                     ?>
@@ -300,12 +347,12 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                         <div class="small-box bg-green animate__animated animate__fadeIn animate__delay-0-5s">
                             <div class="inner">
                                 <h3><?php echo htmlspecialchars($acceptedHistory); ?></h3>
-                                <p>Approved Request</p>
+                                <p>Inbound Stock</p>
                             </div>
                             <div class="icon">
                                 <i class="ion ion-checkmark-round"></i>
                             </div>
-                            <a href="history_order.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="products.php?tab=movements#movements" target="_blank" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     <?php
@@ -323,7 +370,7 @@ while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
                             <div class="icon">
                                 <i class="ion ion-warning"></i>
                             </div>
-                            <a href="history_order.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="history_request.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     

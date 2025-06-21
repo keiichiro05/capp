@@ -14,7 +14,6 @@ if (isset($_SESSION['idpegawai'])) {
     header("location:../index.php?status=please login first");
     exit();
 }
-
 $cekuser = mysqli_query($mysqli, "SELECT count(username) as jmluser FROM authorization WHERE username = '$username' AND modul = 'Warehouse'");
 $user = mysqli_fetch_assoc($cekuser);
 
@@ -26,728 +25,591 @@ if ($user['jmluser'] == "0") {
     exit;
 }
 
-// Set active tab
-$active_tab = $_GET['tab'] ?? 'inbound';
+// Get filter values
+$cabang_filter = isset($_GET['cabang']) ? mysqli_real_escape_string($mysqli, $_GET['cabang']) : '';
 
-// Get warehouse list
-$warehouses = mysqli_query($mysqli, "SELECT * FROM list_warehouse ORDER BY nama");
+// Handle exports
+if (isset($_GET['export'])) {
+    $export_type = $_GET['export'];
+    
+    $query = "SELECT p.*, s.Nama as supplier_name 
+              FROM warehouse p
+              LEFT JOIN supplier s ON p.Supplier = s.Nama
+              WHERE 1=1";
+    
+    if ($cabang_filter != '') {
+        $query .= " AND p.cabang = '$cabang_filter'";
+    }
+    
+    $query .= " ORDER BY p.tanggal DESC";
+    
+    $result = mysqli_query($mysqli, $query);
+    
+    $headers = array('No', 'Code', 'Name Product', 'Stock', 'Category', 'Supplier', 'Unit', 'Reorder', 'Warehouse', 'PIC', 'Date Add');
+    $rows = array();
+    $no = 1;
+    
+    while ($row = mysqli_fetch_assoc($result)) {
+        $rows[] = array(
+            $no++,
+            $row['Code'],
+            $row['Nama'],
+            $row['Stok'],
+            $row['Kategori'],
+            $row['supplier_name'] ? $row['supplier_name'] : 'N/A',
+            $row['Satuan'],
+            $row['reorder_level'],
+            $row['cabang'],
+            $row['pic'],
+            $row['Tanggal']
+        );
+    }
+    
+    $filename = 'stock_export_' . date('Ymd_His');
+    
+    if ($export_type == 'excel') {
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="'.$filename.'.xls"');
+        header('Cache-Control: max-age=0');
+        
+        echo '<table border="1">';
+        echo '<tr>';
+        foreach ($headers as $header) {
+            echo '<th>'.$header.'</th>';
+        }
+        echo '</tr>';
+        
+        foreach ($rows as $row) {
+            echo '<tr>';
+            foreach ($row as $cell) {
+                echo '<td>'.$cell.'</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</table>';
+        exit;
+    }
+    elseif ($export_type == 'csv') {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment;filename="'.$filename.'.csv"');
+        
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+        
+        foreach ($rows as $row) {
+            fputcsv($output, $row);
+        }
+        
+        fclose($output);
+        exit;
+    }
+    elseif ($export_type == 'pdf') {
+        require_once('../tcpdf/tcpdf.php');
+        
+        $pdf = new TCPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Warehouse System');
+        $pdf->SetTitle('Stock Report');
+        $pdf->SetSubject('Stock Report');
+        
+        $pdf->AddPage();
+        $pdf->SetFont('helvetica', '', 10);
+        
+        // Title
+        $pdf->Cell(0, 10, 'Stock Report', 0, 1, 'C');
+        $pdf->Cell(0, 10, 'Generated on: ' . date('Y-m-d H:i:s'), 0, 1, 'C');
+        $pdf->Ln(5);
+        
+        // Table header
+        $html = '<table border="1" cellpadding="5">
+                <tr style="background-color:#f2f2f2;">';
+        foreach ($headers as $header) {
+            $html .= '<th>'.$header.'</th>';
+        }
+        $html .= '</tr>';
+        
+        // Table rows
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($row as $cell) {
+                $html .= '<td>'.$cell.'</td>';
+            }
+            $html .= '</tr>';
+        }
+        
+        $html .= '</table>';
+        
+        $pdf->writeHTML($html, true, false, true, false, '');
+        $pdf->Output($filename.'.pdf', 'D');
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <title>Warehouse Management System</title>
-    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-    <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-    <link href="../css/ionicons.min.css" rel="stylesheet" type="text/css" />
-    <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
-    <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" />
-    <link href="../css/select2.min.css" rel="stylesheet" type="text/css" />
-    <style>
-        /* Custom Tab Styles */
-        .nav-tabs-custom {
-            margin-bottom: 20px;
-            background: #fff;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-            border-radius: 3px;
-        }
-        
-        .nav-tabs-custom > .nav-tabs {
-            margin: 0;
-            border-bottom: 1px solid #f4f4f4;
-            border-top-right-radius: 3px;
-            border-top-left-radius: 3px;
-        }
-        
-        .nav-tabs-custom > .nav-tabs > li {
-            border-top: 3px solid transparent;
-            margin-bottom: -1px;
-        }
-        
-        .nav-tabs-custom > .nav-tabs > li > a {
-            color: #444;
-            border-radius: 0;
-            padding: 12px 20px;
-            font-weight: 600;
-        }
-        
-        .nav-tabs-custom > .nav-tabs > li > a:hover {
-            background-color: #f9f9f9;
-        }
-        
-        .nav-tabs-custom > .nav-tabs > li.active {
-            border-top-color: #3c8dbc;
-        }
-        
-        .nav-tabs-custom > .nav-tabs > li.active > a {
-            background-color: #fff;
-            color: #444;
-            border-left: 1px solid #f4f4f4;
-            border-right: 1px solid #f4f4f4;
-        }
-        
-        .nav-tabs-custom > .tab-content {
-            background: #fff;
-            padding: 15px;
-            border-bottom-right-radius: 3px;
-            border-bottom-left-radius: 3px;
-        }
-        
-        /* Form Styles */
-        .form-box {
-            background: #fff;
-            border-radius: 5px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .form-box .header {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: #fff;
-            padding: 15px;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-        }
-        
-        .form-box .body {
-            padding: 20px;
-        }
-        
-        /* History Table Styles */
-        .history-box {
-            background: #fff;
-            border-radius: 5px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-        }
-        
-        .history-box .header {
-            background: #f9f9f9;
-            padding: 15px;
-            border-bottom: 1px solid #f4f4f4;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-        }
-        
-        .history-box .body {
-            padding: 0;
-        }
-        
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .history-table th {
-            background: #f5f5f5;
-            padding: 10px 15px;
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .history-table td {
-            padding: 10px 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .history-table tr:hover {
-            background-color: #f9f9f9;
-        }
-        
-        /* Status Badges */
-        .badge-pending {
-            background-color: #f39c12;
-        }
-        
-        .badge-completed {
-            background-color: #00a65a;
-        }
-        
-        /* Form Improvements */
-        .form-group {
-            margin-bottom: 15px;
-        }
+    <head>
+        <meta charset="UTF-8">
+        <title>Warehouse Branch</title>
+        <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+        <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+        <link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+        <link href="../css/ionicons.min.css" rel="stylesheet" type="text/css" />
+        <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
+        <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" /> 
+        <style>
+            /* Custom CSS for Order History */
+            .order-history-container {
+                background: #fff;
+                border-radius: 10px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+                overflow: hidden;
+                margin-bottom: 30px;
+            }
 
-        .form-control {
-            border-radius: 3px;
-            box-shadow: none;
-            border: 1px solid #ddd;
-            transition: border-color 0.3s;
-        }
+            .order-history-header {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                padding: 15px 20px;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+            }
 
-        .form-control:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
-        }
+            .order-history-header h3 {
+                margin: 0;
+                font-weight: 600;
+                font-size: 18px;
+                display: inline-block;
+            }
 
-        .select2-container .select2-selection--single {
-            height: 34px;
-            border: 1px solid #ddd;
-        }
+            .filter-container {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 15px 20px;
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #eee;
+            }
 
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 32px;
-        }
+            .filter-form {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
 
-        .help-block {
-            font-size: 12px;
-            color: #777;
-            margin-top: 5px;
-        }
+            .filter-form .form-control {
+                min-width: 180px;
+                border-radius: 4px;
+                border: 1px solid #ddd;
+                box-shadow: none;
+            }
 
-        .btn-block {
-            padding: 10px;
-            font-size: 15px;
-        }
+            .filter-form .btn {
+                border-radius: 4px;
+            }
 
-        /* Required field indicator */
-        label[required]:after {
-            content: " *";
-            color: #e74c3c;
-        }
-        
-        /* Responsive Adjustments */
-        @media (max-width: 768px) {
-            .nav-tabs-custom > .nav-tabs > li {
-                float: none;
-                margin-bottom: 0;
+            .order-history-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .order-history-table th {
+                background-color: #2c3e50;
+                color: white;
+                font-weight: 600;
+                padding: 12px 15px;
+                text-align: left;
+                position: sticky;
+                top: 0;
+            }
+
+            .order-history-table td {
+                padding: 12px 15px;
+                border-bottom: 1px solid #eee;
+                vertical-align: middle;
+            }
+
+            .order-history-table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+
+            .order-history-table tr:hover {
+                background-color: #f1f1f1;
+            }
+
+            /* Barcode Styles */
+            .barcode-cell {
+                text-align: center;
             }
             
-            .nav-tabs-custom > .nav-tabs > li > a {
-                border-radius: 0;
+            .barcode-container {
+                display: inline-block;
+                padding: 5px;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                position: relative;
             }
             
-            .form-box, .history-box {
-                margin-bottom: 15px;
+            .barcode-img {
+                height: 40px;
+                width: auto;
+                max-width: 150px;
+                image-rendering: crisp-edges;
             }
             
-            .row {
-                margin-left: -5px;
-                margin-right: -5px;
+            .barcode-text {
+                font-size: 10px;
+                font-family: monospace;
+                margin-top: 3px;
+                display: block;
             }
-            
-            .col-md-6, .col-md-12 {
-                padding-left: 5px;
-                padding-right: 5px;
+
+            /* Responsive Adjustments */
+            @media (max-width: 768px) {
+                .filter-container {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }
+                
+                .filter-form {
+                    width: 100%;
+                    flex-direction: column;
+                }
+                
+                .filter-form .form-control,
+                .filter-form .btn {
+                    width: 100%;
+                }
+                
+                .order-history-table {
+                    display: block;
+                    overflow-x: auto;
+                }
             }
-        }
-        
-        /* Loading spinner */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            -webkit-animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
-        
-        @-webkit-keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="skin-blue">
-    <header class="header">
-        <a href="index.php" class="logo">Admin Warehouse</a>
-        <nav class="navbar navbar-static-top" role="navigation">
-            <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </a>
-            <div class="navbar-right">
-                <ul class="nav navbar-nav">
-                    <li class="dropdown user user-menu">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                            <i class="glyphicon glyphicon-user"></i>
-                            <span><?php echo htmlspecialchars($username); ?><i class="caret"></i></span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li class="user-header bg-light-blue">
-                                <img src="img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
-                                <p>
-                                    <?php 
-                                    echo htmlspecialchars($pegawai['Nama']) . " - " . htmlspecialchars($pegawai['Jabatan']) . " " . htmlspecialchars($pegawai['Departemen']); ?>
-                                    <small>Member since <?php echo htmlspecialchars($pegawai['Tanggal_Masuk']); ?></small>
-                                </p>
-                            </li>
-                            <li class="user-footer">
-                                <div class="pull-left">
-                                    <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
-                                </div>
-                                <div class="pull-right">
-                                    <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
-                                </div>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-    </header>
-    <div class="wrapper row-offcanvas row-offcanvas-left">
-        <aside class="left-side sidebar-offcanvas">
-            <section class="sidebar">
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Hello, <?php echo htmlspecialchars($username); ?></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
+
+            /* Pagination Styles */
+            .pagination-container {
+                display: flex;
+                justify-content: center;
+                padding: 15px;
+                background-color: #f8f9fa;
+                border-top: 1px solid #eee;
+            }
+
+            .pagination {
+                margin: 0;
+            }
+
+            .pagination > li > a,
+            .pagination > li > span {
+                color: #2c3e50;
+                border: 1px solid #ddd;
+                margin: 0 2px;
+                border-radius: 4px !important;
+            }
+
+            .pagination > li.active > a,
+            .pagination > li.active > span {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                border-color: #2980b9;
+                color: white;
+            }
+
+            /* Empty State */
+            .empty-state {
+                padding: 40px 20px;
+                text-align: center;
+                color: #7f8c8d;
+            }
+
+            .empty-state i {
+                font-size: 50px;
+                margin-bottom: 20px;
+                color: #bdc3c7;
+            }
+
+            .empty-state h4 {
+                margin-bottom: 10px;
+                color: #2c3e50;
+            }
+        </style>
+    </head>
+    <body class="skin-blue">
+        <header class="header">
+            <a href="index.html" class="logo">Admin Warehouse</a>
+            <nav class="navbar navbar-static-top" role="navigation">
+                <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </a>
+                <div class="navbar-right">
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown user user-menu">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <i class="glyphicon glyphicon-user"></i>
+                                <span><?php echo htmlspecialchars($username); ?><i class="caret"></i></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li class="user-header bg-light-blue">
+                                    <img src="img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
+                                    <p>
+                                        <?php 
+                                        echo htmlspecialchars($pegawai['Nama']) . " - " . htmlspecialchars($pegawai['Jabatan']) . " " . htmlspecialchars($pegawai['Departemen']); ?>
+                                        <small>Member since <?php echo htmlspecialchars($pegawai['Tanggal_Masuk']); ?></small>
+                                    </p>
+                                </li>
+                                <li class="user-footer">
+                                    <div class="pull-left">
+                                        <a href="profil.php" class="btn btn-default btn-flat">Profile</a>
+                                    </div>
+                                    <div class="pull-right">
+                                        <a href="logout.php" class="btn btn-default btn-flat">Sign out</a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
                 </div>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="index.php">
-                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="stock.php">
-                            <i class="fa fa-exchange"></i> <span>Stock Transfer</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="product.php">
-                            <i class="fa fa-list"></i> <span>Products</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="order.php">
-                                <i class="fa fa-th"></i> <span>Request</span>
+            </nav>
+        </header>
+        <div class="wrapper row-offcanvas row-offcanvas-left">
+            <aside class="left-side sidebar-offcanvas">
+                <section class="sidebar">
+                    <div class="user-panel">
+                        <div class="pull-left image">
+                            <img src="img/<?php echo htmlspecialchars($pegawai['foto']); ?>" class="img-circle" alt="User Image" />
+                        </div>
+                        <div class="pull-left info">
+                            <p>Hello, <?php echo htmlspecialchars($username); ?></p>
+                            <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
+                        </div>
+                    </div>
+                    <ul class="sidebar-menu">
+                        <li>
+                            <a href="index.php">
+                                <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="active">
+                            <a href="stock.php">
+                                <i class="fa fa-folder"></i> <span>Stock</span>
                             </a>
                         </li>
                         <li>
-                            <a href="history_order.php">
+                            <a href="movement.php">
+                                <i class="fa fa-exchange"></i> <span>Movement</span>
+                            </a>
+                        <li>
+                            <a href="product.php">
+                                <i class="fa fa-list-alt"></i> <span>Products</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="new_request.php">
+                                <i class="fa fa-plus-square"></i> <span>New Request</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="history_request.php">
                                 <i class="fa fa-archive"></i> <span>Request History</span>
                             </a>
                         </li>
-                    <li>
-                        <a href="mailbox.php">
-                            <i class="fa fa-envelope"></i> <span>Mailbox</span>
-                        </a>
-                    </li>
-                </ul>
-            </section>
-        </aside>
-        
-        <aside class="right-side">
-            <section class="content-header">
-                <h1>
-                    Inventory Management
-                    <small>Track your warehouse movements</small>
-                </h1>
-                <ol class="breadcrumb">
-                    <li><a href="index.php"><i class="fa fa-dashboard"></i> Home</a></li>
-                    <li class="active">Inventory</li>
-                </ol>
-            </section>
-
-            <section class="content">
-                <div class="nav-tabs-custom">
-                    <ul class="nav nav-tabs">
-                        <li class="<?php echo $active_tab == 'inbound' ? 'active' : ''; ?>">
-                            <a href="?tab=inbound"><i class="fa fa-download"></i> Inbound</a>
+                          <li>
+                            <a href="sales_request.php">
+                                <i class="fa fa-retweet"></i> <span>Sales Request</span>
+                            </a>
                         </li>
-                        <li class="<?php echo $active_tab == 'outbound' ? 'active' : ''; ?>">
-                            <a href="?tab=outbound"><i class="fa fa-upload"></i> Outbound</a>
+                        <li>
+                            <a href="mailbox.php">
+                                <i class="fa fa-comments"></i> <span>Mailbox</span>
+                            </a>
                         </li>
                     </ul>
-                    
-                    <div class="tab-content">
-                        <!-- Inbound Tab Content -->
-                        <div class="tab-pane <?php echo $active_tab == 'inbound' ? 'active' : ''; ?>" id="inbound">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-box">
-                                        <div class="header">
-                                            <h3 class="box-title"><i class="fa fa-download"></i> Record Inbound</h3>
-                                        </div>
-                                        <div class="body">
-                                            <form method="post" action="process_inbound.php">
-                                                <div class="form-group">
-                                                    <label required>Warehouse *</label>
-                                                    <select class="form-control select2" name="warehouse" required>
-                                                        <option value="">-- Select Warehouse --</option>
-                                                        <?php 
-                                                        mysqli_data_seek($warehouses, 0); // Reset pointer
-                                                        while($wh = mysqli_fetch_assoc($warehouses)): ?>
-                                                            <option value="<?php echo htmlspecialchars($wh['id']); ?>">
-                                                                <?php echo htmlspecialchars($wh['nama']); ?>
-                                                            </option>
-                                                        <?php endwhile; ?>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label required>Item Name</label>
-                                                    <input type="text" class="form-control" name="nama_barang" placeholder="Enter item name" required>
-                                                </div>
-                                                
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label required>Quantity</label>
-                                                            <div class="input-group">
-                                                                <input type="number" class="form-control" name="jumlah" min="1" placeholder="0" required>
-                                                                <span class="input-group-addon">units</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label>Unit Type</label>
-                                                            <select class="form-control" name="unit_type">
-                                                                <option value="Pieces">Pieces</option>
-                                                                <option value="Boxes">Boxes</option>
-                                                                <option value="Pallets">Pallets</option>
-                                                                <option value="Kg">Kilograms</option>
-                                                                <option value="Liters">Liters</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label required>Supplier</label>
-                                                    <input type="text" class="form-control" name="supplier" placeholder="Supplier company name" required>
-                                                </div>
-                                                
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label>Purchase Order Number</label>
-                                                            <input type="text" class="form-control" name="po_number" placeholder="PO-123456">
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label>Expected Arrival</label>
-                                                            <input type="date" class="form-control" name="expected_arrival">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label>Notes</label>
-                                                    <textarea class="form-control" name="keterangan" rows="3" placeholder="Any additional information..."></textarea>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <button type="submit" name="inbound" class="btn btn-primary btn-block">
-                                                        <i class="fa fa-save"></i> Record Inbound
-                                                    </button>
-                                                </div>
-                                                <small class="text-muted">* Required fields</small>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
+                </section>
+            </aside>
+            <aside class="right-side">
+                <section class="content-header">
+                    <h1>
+                        Stock 
+                        <small>View and Manage Stock</small>
+                    </h1>
+                    <ol class="breadcrumb">
+                        <li><a href="index.php"><i class="fa fa-dashboard"></i> Home</a></li>
+                        <li class="active">Stock</li>
+                    </ol>
+                </section>
+
+                <section class="content">
+                    <div class="order-history-container">
+                        <div class="filter-container">
+                            <div class="filter-form">
+                                <a href="stock.php?export=excel" class="btn btn-success" title="Download as Excel">
+                                    <i class="fa fa-file-excel-o"></i> Excel
+                                </a>
+                                <a href="stock.php?export=csv" class="btn btn-info" title="Download as CSV">
+                                    <i class="fa fa-file-text-o"></i> CSV
+                                </a>
+                                <a href="stock.php?export=pdf" class="btn btn-danger" title="Download as PDF">
+                                    <i class="fa fa-file-pdf-o"></i> PDF
+                                </a>
                                 
-                                <div class="col-md-6">
-                                    <div class="history-box">
-                                        <div class="header">
-                                            <h3 class="box-title"><i class="fa fa-history"></i> Recent Inbound History</h3>
-                                        </div>
-                                        <div class="body">
-                                            <div class="table-responsive">
-                                                <table class="history-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Date</th>
-                                                            <th>Warehouse</th>
-                                                            <th>Item</th>
-                                                            <th>Qty</th>
-                                                            <th>Supplier</th>
-                                                            <th>Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <?php
-                                                        $sql = "SELECT i.*, p.Nama as penerima, w.nama as warehouse_name 
-                                                                FROM inbound_log i 
-                                                                JOIN pegawai p ON i.id_pegawai = p.id_pegawai 
-                                                                JOIN list_warehouse w ON i.id = w.id
-                                                                ORDER BY i.tanggal DESC LIMIT 5";
-                                                        $hasil = $mysqli->query($sql);
-                                                        while ($log = $hasil->fetch_assoc()): ?>
-                                                            <tr>
-                                                                <td><?php echo date('d/m/Y', strtotime($log['tanggal'])); ?></td>
-                                                                <td><?php echo htmlspecialchars($log['warehouse_name']); ?></td>
-                                                                <td><?php echo htmlspecialchars($log['nama_barang']); ?></td>
-                                                                <td><?php echo $log['jumlah']; ?></td>
-                                                                <td><?php echo htmlspecialchars($log['supplier']); ?></td>
-                                                                <td>
-                                                                    <span class="badge badge-completed">Completed</span>
-                                                                </td>
-                                                            </tr>
-                                                        <?php endwhile; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            <div class="box-footer text-center">
-                                                <a href="inbound_history.php" class="btn btn-default btn-sm">
-                                                    <i class="fa fa-eye"></i> View Full History
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <form method="get" action="stock.php" class="form-inline">
+                                    <?php
+                                    // Ambil daftar warehouse dari tabel list_warehouse
+                                    $warehouse_query = mysqli_query($mysqli, "SELECT nama FROM list_warehouse ORDER BY nama ASC");
+                                    ?>
+                                    <select name="cabang" class="form-control">
+                                        <option value="">All Warehouse</option>
+                                        <?php while ($wh = mysqli_fetch_assoc($warehouse_query)): ?>
+                                            <option value="<?php echo htmlspecialchars($wh['nama']); ?>" <?php echo ($cabang_filter == $wh['nama'] ? 'selected' : ''); ?>>
+                                                <?php echo htmlspecialchars($wh['nama']); ?>
+                                            </option>
+                                        <?php endwhile; ?>
+                                    </select>
+                            
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-filter"></i> Filter
+                                    </button>
+                                    <?php if(isset($_GET['cabang'])): ?>
+                                        <a href="stock.php" class="btn btn-default">
+                                            <i class="fa fa-times"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                </form>
+                            </div>
+                            <div class="total-records">
+                                <?php
+                                $count_query = "SELECT COUNT(*) as total FROM warehouse WHERE 1=1";
+                                if ($cabang_filter != '') {
+                                    $count_query .= " AND cabang = '$cabang_filter'";
+                                }
+                                
+                                $count_result = mysqli_query($mysqli, $count_query);
+                                $count_row = mysqli_fetch_assoc($count_result);
+                                echo "<span class='badge bg-blue'>{$count_row['total']} records found</span>";
+                                ?>
                             </div>
                         </div>
                         
-                        <!-- Outbound Tab Content -->
-                        <div class="tab-pane <?php echo $active_tab == 'outbound' ? 'active' : ''; ?>" id="outbound">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-box">
-                                        <div class="header" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-                                            <h3 class="box-title"><i class="fa fa-upload"></i> Record Outbound</h3>
-                                        </div>
-                                        <div class="body">
-                                            <form method="post" action="process_outbound.php" id="outbound-form">
-                                                <div class="form-group">
-                                                    <label required>Source Warehouse *</label>
-                                                    <select class="form-control select2" name="source_warehouse" id="source-warehouse" required>
-                                                        <option value="">-- Select Warehouse --</option>
-                                                        <?php 
-                                                        mysqli_data_seek($warehouses, 0); // Reset pointer
-                                                        while($wh = mysqli_fetch_assoc($warehouses)): ?>
-                                                            <option value="<?php echo htmlspecialchars($wh['id']); ?>">
-                                                                <?php echo htmlspecialchars($wh['nama']); ?>
-                                                            </option>
-                                                        <?php endwhile; ?>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label required>Select Item *</label>
-                                                    <select class="form-control select2" name="id_barang" id="item-select" required style="width: 100%;" disabled>
-                                                        <option value="">-- Select Warehouse First --</option>
-                                                    </select>
-                                                    <small class="text-muted help-block">Only items with available stock are shown</small>
-                                                </div>
-                                                
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label required>Quantity</label>
-                                                            <input type="number" class="form-control" name="jumlah" min="1" id="outbound-qty" 
-                                                                   placeholder="0" required>
-                                                        </div>
+                        <div class="table-responsive">
+                            <table class="order-history-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Code</th>
+                                        <th>Name Product</th>
+                                        <th>Stock</th>
+                                        <th>Category</th>
+                                        <th>Supplier</th>
+                                        <th>Unit</th>
+                                        <th>Min Stock</th>
+                                        <th>Warehouse</th>
+                                        <th>PIC</th>
+                                        <th>Added Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $query = "SELECT p.*, s.Nama as supplier_name 
+                                            FROM warehouse p
+                                            LEFT JOIN supplier s ON p.Supplier = s.Nama
+                                            WHERE 1=1";
+                                    
+                                    if ($cabang_filter != '') {
+                                        $query .= " AND p.cabang = '$cabang_filter'";
+                                    }
+                                    
+                                    $query .= " ORDER BY p.tanggal DESC";
+                                    
+                                    $per_page = 15;
+                                    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                                    $start = ($page - 1) * $per_page;
+                                    $query .= " LIMIT $start, $per_page";
+                                    
+                                    $result = mysqli_query($mysqli, $query);
+                                    $no = $start + 1;
+                                    
+                                    if (mysqli_num_rows($result) > 0) {
+                                        while ($row = mysqli_fetch_assoc($result)) {
+                                            echo "<tr>
+                                                <td>{$no}</td>
+                                                <td class='barcode-cell'>
+                                                    <div class='barcode-container'>
+                                                        <img src='https://barcode.tec-it.com/barcode.ashx?data=".urlencode($row['Code'])."&code=Code128&dpi=96' 
+                                                            class='barcode-img' 
+                                                            alt='".htmlspecialchars($row['Code'])."'
+                                                            title='".htmlspecialchars($row['Code'])."'>
+                                                        <span class='barcode-text'>".htmlspecialchars($row['Code'])."</span>
                                                     </div>
-                                                    <div class="col-md-6">
-                                                        <div class="form-group">
-                                                            <label>Current Stock</label>
-                                                            <input type="text" class="form-control" id="current-stock" readonly>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label required>Destination Warehouse *</label>
-                                                    <select class="form-control select2" name="destination_warehouse" required>
-                                                        <option value="">-- Select Warehouse --</option>
-                                                        <?php 
-                                                        mysqli_data_seek($warehouses, 0); // Reset pointer
-                                                        while($wh = mysqli_fetch_assoc($warehouses)): ?>
-                                                            <option value="<?php echo htmlspecialchars($wh['id']); ?>">
-                                                                <?php echo htmlspecialchars($wh['nama']); ?>
-                                                            </option>
-                                                        <?php endwhile; ?>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label>Recipient/Department</label>
-                                                    <input type="text" class="form-control" name="recipient" placeholder="Person or department receiving">
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <label required>Purpose/Notes</label>
-                                                    <textarea class="form-control" name="keterangan" rows="3" 
-                                                              placeholder="Reason for outbound movement..." required></textarea>
-                                                </div>
-                                                
-                                                <div class="form-group">
-                                                    <button type="submit" name="outbound" class="btn btn-danger btn-block" id="outbound-submit">
-                                                        <i class="fa fa-save"></i> Record Outbound
-                                                    </button>
-                                                </div>
-                                                <small class="text-muted">* Required fields</small>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <div class="history-box">
-                                        <div class="header">
-                                            <h3 class="box-title"><i class="fa fa-history"></i> Recent Outbound History</h3>
-                                        </div>
-                                        <div class="body">
-                                            <div class="table-responsive">
-                                                <table class="history-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Date</th>
-                                                            <th>From</th>
-                                                            <th>To</th>
-                                                            <th>Item</th>
-                                                            <th>Qty</th>
-                                                            <th>Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <?php
-                                                        $sql = "SELECT o.*, p.Nama as pegawai_nama, 
-                                                               sw.nama as source_warehouse, dw.nama as dest_warehouse
-                                                                FROM outbound_log o 
-                                                                JOIN pegawai p ON o.id_pegawai = p.id_pegawai 
-                                                                JOIN list_warehouse sw ON o.source_warehouse = sw.id
-                                                                JOIN list_warehouse dw ON o.destination_warehouse = dw.id
-                                                                ORDER BY o.tanggal DESC LIMIT 5";
-                                                        $hasil = $mysqli->query($sql);
-                                                        while ($log = $hasil->fetch_assoc()): ?>
-                                                            <tr>
-                                                                <td><?php echo date('d/m/Y', strtotime($log['tanggal'])); ?></td>
-                                                                <td><?php echo htmlspecialchars($log['source_warehouse']); ?></td>
-                                                                <td><?php echo htmlspecialchars($log['dest_warehouse']); ?></td>
-                                                                <td><?php echo htmlspecialchars($log['nama_barang']); ?></td>
-                                                                <td><?php echo $log['jumlah']; ?></td>
-                                                                <td>
-                                                                    <span class="badge badge-completed">Completed</span>
-                                                                </td>
-                                                            </tr>
-                                                        <?php endwhile; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            <div class="box-footer text-center">
-                                                <a href="outbound_history.php" class="btn btn-default btn-sm">
-                                                    <i class="fa fa-eye"></i> View Full History
+                                                </td>
+                                                <td>".htmlspecialchars($row['Nama'])."</td>
+                                                <td>".htmlspecialchars($row['Stok'])."</td>
+                                                <td>".htmlspecialchars($row['Kategori'])."</td>
+                                                <td>".htmlspecialchars($row['supplier_name'] ? $row['supplier_name'] : 'N/A')."</td>
+                                                <td>".htmlspecialchars($row['Satuan'])."</td>
+                                                <td>".htmlspecialchars($row['reorder_level'])."</td>
+                                                <td>".htmlspecialchars($row['cabang'])."</td>
+                                                <td>".htmlspecialchars($row['pic'])."</td>
+                                                <td>".htmlspecialchars($row['Tanggal'])."</td>
+                                            <td><a href='details.php?code=".urlencode($row['Code'])."' class='btn btn-xs btn-info'>
+                                                    <i class='fa fa-eye'></i> Details
                                                 </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                            </td>
+                                            </tr>";
+                                            $no++;
+                                        }
+                                    } else {
+                                        echo "<tr>
+                                            <td colspan='11'>
+                                                <div class='empty-state'>
+                                                    <i class='fa fa-inbox'></i>
+                                                    <h4>No Stock Data Found</h4>
+                                                    <p>There are no items matching your criteria</p>
+                                                </div>
+                                            </td>
+                                        </tr>";
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination-container">
+                            <ul class="pagination">
+                                <?php
+                                $total_pages = ceil($count_row['total'] / $per_page);
+                                
+                                if ($page > 1) {
+                                    echo "<li><a href='stock.php?page=".($page-1).
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        "'>&laquo;</a></li>";
+                                }
+                                
+                                for ($i = 1; $i <= $total_pages; $i++) {
+                                    $active = ($i == $page) ? "active" : "";
+                                    echo "<li class='$active'><a href='stock.php?page=$i".
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        "'>$i</a></li>";
+                                }
+                                
+                                if ($page < $total_pages) {
+                                    echo "<li><a href='stock.php?page=".($page+1).
+                                        ($cabang_filter ? "&cabang=$cabang_filter" : "").
+                                        "'>&raquo;</a></li>";
+                                }
+                                ?>
+                            </ul>
                         </div>
                     </div>
-                </div>
-            </section>
-        </aside>
-    </div>
-    
-    <script src="../js/jquery.min.js"></script>
-    <script src="../js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="../js/AdminLTE/app.js" type="text/javascript"></script>
-    <script src="../js/select2.min.js" type="text/javascript"></script>
-    <script>
-    $(document).ready(function() {
-        // Initialize Select2
-        $('.select2').select2();
+                </section>
+            </aside>
+        </div>
         
-        // Warehouse selection change handler for outbound
-        $('#source-warehouse').change(function() {
-            var warehouseId = $(this).val();
-            var itemSelect = $('#item-select');
-            
-            if (warehouseId) {
-                // Enable item select and load items
-                itemSelect.prop('disabled', false).empty().append('<option value="">-- Loading Items --</option>');
-                
-                // Show loading state
-                var submitBtn = $('#outbound-submit');
-                var originalText = submitBtn.html();
-                submitBtn.prop('disabled', true).html('<span class="loading-spinner"></span> Loading items...');
-                
-                // AJAX request to get items for selected warehouse
-                $.ajax({
-                    url: 'get_warehouse_items.php',
-                    type: 'GET',
-                    data: { warehouse_id: warehouseId },
-                    dataType: 'json',
-                    success: function(data) {
-                        itemSelect.empty().append('<option value="">-- Select Item --</option>');
-                        $.each(data, function(index, item) {
-                            itemSelect.append(
-                                $('<option></option>')
-                                    .val(item.id_barang)
-                                    .text(item.Nama + ' (Stock: ' + item.Stok + ')')
-                                    .data('stock', item.Stok)
-                            );
-                        });
-                        submitBtn.prop('disabled', false).html(originalText);
-                    },
-                    error: function() {
-                        itemSelect.empty().append('<option value="">-- Error loading items --</option>');
-                        submitBtn.prop('disabled', false).html(originalText);
-                    }
-                });
-            } else {
-                // Disable item select if no warehouse selected
-                itemSelect.prop('disabled', true).empty().append('<option value="">-- Select Warehouse First --</option>');
-                $('#current-stock').val('');
-                $('#outbound-qty').val('').removeAttr('max');
-            }
-        });
-        
-        // Item selection change handler for outbound
-        $('#item-select').change(function() {
-            var selected = $(this).find('option:selected');
-            var stock = selected.data('stock');
-            $('#current-stock').val(stock || '0');
-            $('#outbound-qty').attr('max', stock || '1').val('');
-        });
-        
-        // Form validation
-        $('#outbound-form').submit(function(e) {
-            var qty = parseInt($('#outbound-qty').val());
-            var stock = parseInt($('#current-stock').val());
-            var sourceWh = $('#source-warehouse').val();
-            var destWh = $('select[name="destination_warehouse"]').val();
-            
-            if (sourceWh === destWh) {
-                alert('Source and destination warehouses cannot be the same!');
-                return false;
-            }
-            
-            if (isNaN(qty)) {
-                alert('Please enter a valid quantity!');
-                return false;
-            }
-            
-            if (qty > stock) {
-                alert('Quantity cannot exceed available stock!');
-                return false;
-            }
-            
-            if (qty <= 0) {
-                alert('Quantity must be greater than zero!');
-                return false;
-            }
-            
-            return true;
-        });
-        
-        // Date picker for expected arrival
-        $('input[name="expected_arrival"]').datepicker({
-            format: 'yyyy-mm-dd',
-            todayHighlight: true,
-            autoclose: true
-        });
-    });
-    </script>
-</body>
+        <script src="../js/jquery.min.js"></script>
+        <script src="../js/bootstrap.min.js" type="text/javascript"></script>
+        <script src="../js/AdminLTE/app.js" type="text/javascript"></script>
+    </body>
 </html>

@@ -394,7 +394,7 @@ if ($user['jmluser'] == "0") {
                     </li>
                     <li>
                         <a href="daftarACC.php">
-                            <i class="fa fa-history"></i> <span>Request History</span>
+                            <i class="fa fa-undo"></i> <span>Request History</span>
                         </a>
                     </li>
                     <li>

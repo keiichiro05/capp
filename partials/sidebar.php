@@ -34,12 +34,12 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'order.php') ? 'active' : ''; ?>" href="order.php">
+            <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'new_request.php') ? 'active' : ''; ?>" href="new_request.php">
                 <i class="fas fa-clipboard-list"></i> Requests
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'history_order.php') ? 'active' : ''; ?>" href="history_order.php">
+            <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'history_request.php') ? 'active' : ''; ?>" href="history_request.php">
                 <i class="fas fa-history"></i> Request History
             </a>
         </li>

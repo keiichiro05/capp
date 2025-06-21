@@ -128,7 +128,7 @@ if(!isset($_SESSION['username'])){
                             </a>
                         </li>
                         <li>
-                            <a href="order.php">
+                            <a href="new_request.php">
                                 <i class="fa fa-th"></i> <span>Order</span>
                             </a>
                         </li>

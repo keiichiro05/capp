@@ -14,5 +14,5 @@ if (isset($_SESSION['idpegawai'])) {
 }
 $no=$_GET['no'];
 mysqli_query($mysqli,"DELETE FROM dariwarehouse WHERE No='$no'");
-header("location:order.php");
+header("location:new_request.php");
 ?>

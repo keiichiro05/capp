@@ -179,7 +179,7 @@ $active_tab = $_GET['tab'] ?? 'inbound';
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="order.php" class="nav-link">
+                            <a href="new_request.php" class="nav-link">
                                 <i class="nav-icon fas fa-clipboard-list"></i>
                                 <p>Requests</p>
                             </a>

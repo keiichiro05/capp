@@ -199,11 +199,11 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'category';
                 <li><a href="index.php"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a></li>
                 <li class="active"><a href="product.php"><i class="fa fa-list-alt"></i> <span>Products</span></a></li>
                  <li class="treeview">
-                            <a href="order.php">
+                            <a href="new_request.php">
                                 <i class="fa fa-th"></i> <span>Request</span>
                             </a>
                             <ul class="treeview-menu">
-                                <li><a href="history_order.php"><i class="fa fa-archive"></i>Request History</a></li>
+                                <li><a href="history_request.php"><i class="fa fa-archive"></i>Request History</a></li>
                             </ul>
                         </li>
                         <li>

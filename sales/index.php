@@ -1,16 +1,33 @@
-<!DOCTYPE html>
-<?php 
-include "konekdb.php";
+<?php
 session_start();
-$idpegawai=$_SESSION['idpegawai'];
-if(!isset($_SESSION['username'])){
-	header ("location:../index.php");
+
+// Check if user is logged in
+if (!isset($_SESSION['username'], $_SESSION['idpegawai'])) {
+    header("Location: ../index.php?status=Silakan login dulu");
+    exit();
+}
+
+require_once('../konekdb.php');
+
+$username = $_SESSION['username'];
+$idpegawai = $_SESSION['idpegawai'];
+
+// Check if user has access to Sales module
+$stmt = $mysqli->prepare("SELECT COUNT(username) as jmluser FROM authorization WHERE username = ? AND modul = 'Sales'");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+if ($user['jmluser'] == "0") {
+    header("Location: ../index.php?status=Akses ditolak");
+    exit();
 }
 ?>
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>E-pharm | Dashboard</title>
+        <title>U-PSN | Dashboard</title>
         <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
         <!-- bootstrap 3.0.2 -->
         <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
@@ -30,6 +47,7 @@ if(!isset($_SESSION['username'])){
         <link href="../css/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css" rel="stylesheet" type="text/css" />
         <!-- Theme style -->
         <link href="../css/AdminLTE.css" rel="stylesheet" type="text/css" />
+    <link href="../css/modern-3d.css" rel="stylesheet" type="text/css" />
 
         <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -43,7 +61,7 @@ if(!isset($_SESSION['username'])){
         <header class="header">
             <a href="index.php" class="logo">
                 <!-- Add the class icon to your logo image or logo icon to add the margining -->
-                E-pharm
+                U-PSN
             </a>
             <!-- Header Navbar: style can be found in header.less -->
             <nav class="navbar navbar-static-top" role="navigation">
@@ -144,41 +162,16 @@ if(!isset($_SESSION['username'])){
                     <!-- sidebar menu: : style can be found in sidebar.less -->
                     <ul class="sidebar-menu">
 
-                       <li class="active">
-                            <a href="index.php">
-                                <i class="fa fa-dashboard"></i> <span>Dashboard</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="jualbarang.php">
-                                <i class="fa fa-usd"></i> <span>Jual Barang</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="datapenjualan.php">
-                                <i class="fa fa-calendar"></i> <span>Data Penjualan</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="updateBarang.php">
-                                <i class="fa fa-suitcase"></i> <span>Harga Jual Barang</span>
-                            </a>
-                        </li>
-						<li>
-                            <a href="cuti.php">
-                                <i class="fa fa-suitcase"></i> <span>Cuti</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailbox.php">
-                                <i class="fa fa-comments"></i> <span>Mailbox</span>
-								
-                            </a>
-                        </li>
-                        
-                         
-                       
-                    </ul>
+    <li class="active"><a href="index.php"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a></li>
+    <li><a href="account.php"><i class="fa fa-users"></i> <span>Account</span></a></li>
+    <li><a href="contact.php"><i class="fa fa-envelope"></i> <span>Contact</span></a></li>
+    <li><a href="products.php"><i class="fa fa-archive"></i> <span>Product</span></a></li>
+    <li><a href="product_request.php"><i class="fa fa-plus-square"></i> <span>Product Request</span></a></li>
+    <li><a href="leads.php"><i class="fa fa-lightbulb-o"></i> <span>Leads</span></a></li>
+    <li><a href="opportunity.php"><i class="fa fa-rocket"></i> <span>Opportunity</span></a></li>
+    <li><a href="sales_new_request.php"><i class="fa fa-truck"></i> <span>Sales Order</span></a></li>
+       
+</ul>
                 </section>
                 <!-- /.sidebar -->
             </aside>
@@ -200,13 +193,13 @@ if(!isset($_SESSION['username'])){
                 <!-- Main content -->
                 <section class="content">
 				<?php 
-                $sql1 =mysqli_query($mysqli, "SELECT count(id_penjualan) as total FROM penjualan");
+                $sql1 =mysqli_query($mysqli, "SELECT count(kode_penjualan) as total FROM sales_orders");
 				$jual=mysqli_fetch_array($sql1);
                 $sql2 = mysqli_query($mysqli, "SELECT count(id_pemasukan) as jml FROM pemasukan where id_pegawai='$iduser' ");
 				$data=mysqli_fetch_array($sql2);
                 $not4=mysqli_query($mysqli, "SELECT count(id_pegawai) as jml from cuti where aksi='1' and id_pegawai='$idpegawai'");
 				$tot4=mysqli_fetch_array($not4);
-                $not5=mysqli_query($mysqli, "SELECT count(id_pesan) as jml from pesan where ke='$idpegawai' and status='0'");
+                $not5 = mysqli_query($mysqli, "SELECT count(id_pesan) as jml from pesan where ke='$idpegawai' and status='0'");
 				$tot5=mysqli_fetch_array($not5);
 				?>
                     <!-- Small boxes (Stat box) -->
@@ -225,7 +218,7 @@ if(!isset($_SESSION['username'])){
                                 <div class="icon">
                                     <i class="ion ion-bag"></i>
                                 </div>
-                                <a href="jualbarang.php" class="small-box-footer">
+                                <a href="sales_new_request.php" class="small-box-footer">
                                     More info <i class="fa fa-arrow-circle-right"></i>
                                 </a>
                             </div>

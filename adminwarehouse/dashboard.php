@@ -43,76 +43,79 @@ if ($hour < 12) {
 }
 
 // Fetch dashboard data
-$queryOrders = mysqli_query($mysqli, "SELECT COUNT(*) as totalOrders FROM pemesanan");
-$ordersData = mysqli_fetch_array($queryOrders);
-$totalOrders = $ordersData['totalOrders'];
-
-$queryPending = mysqli_query($mysqli, "SELECT COUNT(*) as totalPending FROM pemesanan WHERE status = 0");
-$pendingData = mysqli_fetch_array($queryPending);
-$totalPending = $pendingData['totalPending'];
-
-$queryAcc = mysqli_query($mysqli, "SELECT COUNT(*) as totalAcc FROM pemesanan WHERE status = 1");
-$accData = mysqli_fetch_array($queryAcc);
-$totalAcc = $accData['totalAcc'];
-
-$queryDecline = mysqli_query($mysqli, "SELECT COUNT(*) as totalDecline FROM pemesanan WHERE status = 2");
-$DeclineData = mysqli_fetch_array($queryDecline);
-$totalDecline = $DeclineData['totalDecline'];
-
-
-$queryStock = mysqli_query($mysqli, "SELECT SUM(stok) as totalStock FROM warehouse");
-$stockData = mysqli_fetch_array($queryStock);
-$totalStock = $stockData['totalStock'];
-
-$queryLowStockCount = mysqli_query($mysqli, "SELECT COUNT(*) as lowStockCount FROM warehouse WHERE stok < reorder_level");
-$lowStockCountData = mysqli_fetch_array($queryLowStockCount);
-$lowStockCount = $lowStockCountData['lowStockCount'];
-
-// Data for Stock Overview Bar Chart
-$queryBar = mysqli_query($mysqli, "SELECT nama, stok, reorder_level FROM warehouse ORDER BY stok ASC LIMIT 10");
-$barLabels = [];
-$barStockData = [];
-$barReorderData = [];
-while ($row = mysqli_fetch_assoc($queryBar)) {
-    $barLabels[] = $row['nama'];
-    $barStockData[] = $row['stok'];
-    $barReorderData[] = $row['reorder_level'];
+function getDashboardData($mysqli) {
+    $data = [];
+    
+    // Total orders
+    $query = mysqli_query($mysqli, "SELECT COUNT(*) as total FROM pemesanan");
+    $data['totalOrders'] = mysqli_fetch_array($query)['total'];
+    
+    // Pending requests
+    $query = mysqli_query($mysqli, "SELECT COUNT(*) as total FROM dariwarehouse WHERE status = 0");
+    $data['totalPending'] = mysqli_fetch_array($query)['total'];
+    
+    // Approved requests
+    $query = mysqli_query($mysqli, "SELECT COUNT(*) as total FROM pemesanan WHERE status = 1");
+    $data['totalAcc'] = mysqli_fetch_array($query)['total'];
+    
+    // Declined requests
+    $query = mysqli_query($mysqli, "SELECT COUNT(*) as total FROM pemesanan WHERE status = 2");
+    $data['totalDecline'] = mysqli_fetch_array($query)['total'];
+    
+    // Total stock
+    $query = mysqli_query($mysqli, "SELECT SUM(stok) as total FROM warehouse");
+    $data['totalStock'] = mysqli_fetch_array($query)['total'] ?? 0;
+    
+    // Low stock count
+    $query = mysqli_query($mysqli, "SELECT COUNT(*) as total FROM warehouse WHERE stok < reorder_level");
+    $data['lowStockCount'] = mysqli_fetch_array($query)['total'];
+    
+    // Stock overview data (top 10 lowest stock)
+    $query = mysqli_query($mysqli, "SELECT nama, stok, reorder_level FROM warehouse ORDER BY stok ASC LIMIT 10");
+    $data['barLabels'] = $data['barStockData'] = $data['barReorderData'] = [];
+    while ($row = mysqli_fetch_assoc($query)) {
+        $data['barLabels'][] = $row['nama'];
+        $data['barStockData'][] = $row['stok'];
+        $data['barReorderData'][] = $row['reorder_level'];
+    }
+    
+    // Stock distribution by category
+    $query = mysqli_query($mysqli, "SELECT kategori, SUM(stok) as total FROM warehouse GROUP BY kategori");
+    $data['pieLabels'] = $data['pieData'] = $data['pieColors'] = [];
+    $colorPalette = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#f8f9fc', '#5a5c69', '#3a3b45', '#2e59d9'];
+    $i = 0;
+    while ($row = mysqli_fetch_assoc($query)) {
+        $data['pieLabels'][] = $row['kategori'];
+        $data['pieData'][] = $row['total'];
+        $data['pieColors'][] = $colorPalette[$i % count($colorPalette)];
+        $i++;
+    }
+    
+    // Recent orders
+    $query = mysqli_query($mysqli, "SELECT * FROM dariwarehouse ORDER BY date_created DESC LIMIT 5");
+    $data['recentOrders'] = [];
+    while ($row = mysqli_fetch_assoc($query)) {
+        $data['recentOrders'][] = $row;
+    }
+    
+    // Outbound orders
+    $query = mysqli_query($mysqli, "SELECT * FROM outbound_log ORDER BY tanggal DESC LIMIT 5");
+    $data['outboundOrders'] = [];
+    while ($row = mysqli_fetch_assoc($query)) {
+        $data['outboundOrders'][] = $row;
+    }
+    
+    // Low stock items for alerts
+    $query = mysqli_query($mysqli, "SELECT nama, stok, reorder_level FROM warehouse WHERE stok < reorder_level ORDER BY stok ASC LIMIT 8");
+    $data['lowStockItems'] = [];
+    while ($row = mysqli_fetch_assoc($query)) {
+        $data['lowStockItems'][] = $row;
+    }
+    
+    return $data;
 }
 
-// Data for Stock Distribution by Category Pie Chart
-$queryPie = mysqli_query($mysqli, "SELECT kategori, SUM(stok) as total FROM warehouse GROUP BY kategori");
-$pieLabels = [];
-$pieData = [];
-$pieColors = [];
-$colorPalette = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#f8f9fc', '#5a5c69', '#3a3b45', '#2e59d9'];
-$i = 0;
-while ($row = mysqli_fetch_assoc($queryPie)) {
-    $pieLabels[] = $row['kategori'];
-    $pieData[] = $row['total'];
-    $pieColors[] = $colorPalette[$i % count($colorPalette)];
-    $i++;
-}
-
-// Data for Recent Orders
-$queryRecentOrders = mysqli_query($mysqli, "SELECT * FROM dariwarehouse ORDER BY date_created DESC LIMIT 5");
-$recentOrders = [];
-while ($row = mysqli_fetch_assoc($queryRecentOrders)) {
-    $recentOrders[] = $row;
-}
-
-// Data for Inbound Orders
-$queryInboundOrders = mysqli_query($mysqli, "SELECT * FROM inbound_log ORDER BY tanggal DESC LIMIT 5");
-$inboundOrders = [];
-while ($row = mysqli_fetch_assoc($queryInboundOrders)) {
-    $inboundOrders[] = $row;
-}
-
-// Data for Outbound Orders
-$queryOutboundOrders = mysqli_query($mysqli, "SELECT * FROM outbound_log ORDER BY tanggal DESC LIMIT 5");
-$outboundOrders = [];
-while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
-    $outboundOrders[] = $row;
-}
+$dashboardData = getDashboardData($mysqli);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -120,12 +123,15 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Warehouse Manager Dashboard</title>
+    
+    <!-- CSS Links -->
     <link href="../css/bootstrap.min.css" rel="stylesheet">
     <link href="../css/font-awesome.min.css" rel="stylesheet">
     <link href="../css/AdminLTE.css" rel="stylesheet">
     <link href="../css/modern-3d.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary: #4e73df;
@@ -142,6 +148,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             background-color: #f8f9fc;
         }
         
+        /* Dashboard Header */
         .dashboard-header {
             background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
             color: white;
@@ -172,6 +179,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             margin-right: 5px;
         }
         
+        /* Small Boxes */
         .small-box {
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
@@ -229,6 +237,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             color: white;
         }
         
+        /* Box Styling */
         .box {
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
@@ -264,11 +273,13 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             border-bottom-right-radius: 10px;
         }
         
+        /* Chart Containers */
         .chart-container {
             position: relative;
             height: 300px;
         }
         
+        /* Alert Items */
         .alert-item {
             border-left: 4px solid var(--danger);
             margin-bottom: 10px;
@@ -292,6 +303,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             border-left-color: var(--warning);
         }
         
+        /* Products List */
         .products-list {
             list-style: none;
             padding: 0;
@@ -318,6 +330,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             color: #6c757d;
         }
         
+        /* Sidebar */
         .sidebar-menu > li > a {
             border-radius: 5px;
             margin: 5px 10px;
@@ -343,6 +356,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             border-left-color: var(--primary);
         }
         
+        /* Info Box */
         .info-box {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
@@ -386,6 +400,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             margin-top: 5px;
         }
         
+        /* Color Classes */
         .bg-primary { background-color: var(--primary) !important; }
         .bg-success { background-color: var(--success) !important; }
         .bg-info { background-color: var(--info) !important; }
@@ -437,7 +452,9 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             </ul>
         </div>
     </header>
+    
     <div class="wrapper row-offcanvas row-offcanvas-left">
+        <!-- Sidebar -->
         <aside class="left-side sidebar-offcanvas">
             <section class="sidebar">
                 <div class="user-panel">
@@ -449,6 +466,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                
                 <ul class="sidebar-menu">
                     <li>
                         <a href="streamlit.php">
@@ -467,12 +485,12 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                     </li>
                     <li>
                         <a href="daftarACC.php">
-                            <i class="fa fa-history"></i> <span>Request History</span>
+                            <i class="fa fa-undo"></i> <span>Request History</span>
                         </a>
                     </li>
                     <li>
                         <a href="stock.php">
-                            <i class="fa fa-cubes"></i> <span>Inventory</span>
+                           <i class="fa fa-archive"></i> <span>Inventory</span>
                         </a>
                     </li>
                     <li>
@@ -484,6 +502,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             </section>
         </aside>
 
+        <!-- Main Content -->
         <aside class="right-side">
             <section class="content-header custom-dashboard-header">
                 <div class="row">
@@ -505,46 +524,46 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                     <div class="col-lg-3 col-xs-6">
                         <div class="small-box bg-primary animate__animated animate__fadeIn">
                             <div class="inner">
-                                <h3><?php echo htmlspecialchars($totalOrders); ?></h3>
+                                <h3><?php echo htmlspecialchars($dashboardData['totalOrders']); ?></h3>
                                 <p>Total Request</p>
                             </div>
                             <div class="icon">
                                 <i class="fa fa-shopping-cart"></i>
                             </div>
-                            <a href="index.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="daftarACC.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     
                     <div class="col-lg-3 col-xs-6">
                         <div class="small-box bg-warning animate__animated animate__fadeIn animate__delay">
                             <div class="inner">
-                                <h3><?php echo htmlspecialchars($totalPending); ?></h3>
+                                <h3><?php echo htmlspecialchars($dashboardData['totalPending']); ?></h3>
                                 <p>Pending Request</p>
                             </div>
                             <div class="icon">
                                 <i class="fa fa-clock-o"></i>
                             </div>
-                            <a href="index.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="list_request.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
 
                     <div class="col-lg-3 col-xs-6">
                         <div class="small-box bg-danger animate__animated animate__fadeIn animate__delay">
                             <div class="inner">
-                                <h3><?php echo htmlspecialchars($totalDecline); ?></h3>
+                                <h3><?php echo htmlspecialchars($dashboardData['totalDecline']); ?></h3>
                                 <p>Decline Request</p>
                             </div>
                             <div class="icon">
                                 <i class="fa fa-exclamation-circle"></i>
                             </div>
-                            <a href="index.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                            <a href="daftarACC.php" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
 
                     <div class="col-lg-3 col-xs-6">
                         <div class="small-box bg-success animate__animated animate__fadeIn animate__delay">
                             <div class="inner">
-                                <h3><?php echo htmlspecialchars($totalAcc); ?></h3>
+                                <h3><?php echo htmlspecialchars($dashboardData['totalAcc']); ?></h3>
                                 <p>Approved Request</p>
                             </div>
                             <div class="icon">
@@ -557,7 +576,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                     <div class="col-lg-3 col-xs-6">
                         <div class="small-box bg-purple animate__animated animate__fadeIn animate__delay">
                             <div class="inner">
-                                <h3><?php echo htmlspecialchars($totalStock); ?></h3>
+                                <h3><?php echo htmlspecialchars($dashboardData['totalStock']); ?></h3>
                                 <p>Total Inventory Items</p>
                             </div>
                             <div class="icon">
@@ -600,7 +619,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                                     <i class="fa fa-exclamation-triangle text-danger"></i> Stock Alerts
                                 </h3>
                                 <span class="label label-danger pull-right">
-                                    <?php echo htmlspecialchars($lowStockCount); ?> Alerts
+                                    <?php echo htmlspecialchars($dashboardData['lowStockCount']); ?> Alerts
                                 </span>
                             </div>
                             <div class="box-body">
@@ -610,26 +629,17 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                                     </span>
                                     <div class="info-box-content">
                                         <span class="info-box-text">Critical Items</span>
-                                        <span class="info-box-number"><?php echo htmlspecialchars($lowStockCount); ?></span>
+                                        <span class="info-box-number"><?php echo htmlspecialchars($dashboardData['lowStockCount']); ?></span>
                                         <div class="progress">
-                                            <div class="progress-bar" style="width: <?php echo htmlspecialchars(min(100, ($totalStock > 0 ? ($lowStockCount / $totalStock) * 100 : 0))); ?>%"></div>
+                                            <div class="progress-bar" style="width: <?php echo htmlspecialchars(min(100, ($dashboardData['totalStock'] > 0 ? ($dashboardData['lowStockCount'] / $dashboardData['totalStock']) * 100 : 0))); ?>%"></div>
                                         </div>
                                         <span class="progress-description">Items below reorder level</span>
                                     </div>
                                 </div>
                                 
                                 <ul class="list-group stock-alert-list">
-                                    <?php
-                                    // Fetch low stock items for alert list
-                                    $lowStockItems = [];
-                                    $queryLowStockItems = mysqli_query($mysqli, "SELECT nama, stok, reorder_level FROM warehouse WHERE stok < reorder_level ORDER BY stok ASC LIMIT 8");
-                                    while ($row = mysqli_fetch_assoc($queryLowStockItems)) {
-                                        $lowStockItems[] = $row;
-                                    }
-                                    ?>
-                                    
-                                    <?php if (!empty($lowStockItems)): ?>
-                                        <?php foreach ($lowStockItems as $lowStock): ?>
+                                    <?php if (!empty($dashboardData['lowStockItems'])): ?>
+                                        <?php foreach ($dashboardData['lowStockItems'] as $lowStock): ?>
                                             <?php
                                             $percent = $lowStock['reorder_level'] > 0 ? ($lowStock['stok'] / $lowStock['reorder_level']) * 100 : 0;
                                             $alertClass = $percent < 50 ? 'stock-critical' : 'stock-warning';
@@ -688,7 +698,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                         <div class="nav-tabs-custom">
                             <div class="box-header with-border">
                                 <h3 class="box-title">
-                                    <i class="fa fa-list-alt text-warning"></i> Recent Transactions
+                                    <i class="fa fa-list-alt text-warning"></i> Recent Requests
                                 </h3>
                                 <div class="box-tools pull-right">
                                     <button type="button" class="btn btn-box-tool" data-widget="collapse">
@@ -697,17 +707,17 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                                 </div>
                             </div>
                             <div class="box-body">
-                                <?php if (!empty($recentOrders)): ?>
+                                <?php if (!empty($dashboardData['recentOrders'])): ?>
                                     <ul class="products-list product-list-in-box">
-                                        <?php foreach ($recentOrders as $order): ?>
+                                        <?php foreach ($dashboardData['recentOrders'] as $order): ?>
                                             <?php
                                             $statusClass = $order['status'] == 1 ? 'success' : 'warning';
                                             $statusText = $order['status'] == 1 ? 'Approved' : 'Pending';
                                             ?>
                                             <li class="item">
                                                 <div class="product-info">
-                                                    <a href="order_detail.php?id=<?php echo htmlspecialchars($order['id']); ?>" class="product-title">
-                                                        Order #<?php echo htmlspecialchars($order['id']); ?>
+                                                    <a href="order_detail.php?nama=<?php echo htmlspecialchars($order['nama']); ?>" class="product-title">
+                                                        Order #<?php echo htmlspecialchars($order['nama']); ?>
                                                         <span class="label label-<?php echo htmlspecialchars($statusClass); ?> pull-right">
                                                             <?php echo htmlspecialchars($statusText); ?>
                                                         </span>
@@ -720,11 +730,11 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php else: ?>
-                                    <div class="alert alert-info">No recent orders found</div>
+                                    <div class="alert alert-info">No recent request found</div>
                                 <?php endif; ?>
                             </div>
                             <div class="box-footer text-center">
-                                <a href="index.php" class="uppercase">View All Orders</a>
+                                <a href="daftarACC.php" class="uppercase">View All Orders</a>
                             </div>
                         </div>
                     </div>
@@ -745,34 +755,15 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                             <ul class="nav nav-tabs pull-right">
                                 <li class="active"><a href="#inbound-tab" data-toggle="tab">Inbound</a></li>
                                 <li><a href="#outbound-tab" data-toggle="tab">Outbound</a></li>
-                                
                             </ul>
                             <div class="tab-content">
                                 <div class="tab-pane active" id="inbound-tab">
-                                    <?php if (!empty($inboundOrders)): ?>
-                                        <ul class="products-list product-list-in-box">
-                                            <?php foreach ($inboundOrders as $order): ?>
-                                                <li class="item">
-                                                    <div class="product-info">
-                                                        <a href="#" class="product-title">
-                                                            Inbound #<?php echo htmlspecialchars($order['id']); ?>
-                                                            <span class="label label-info pull-right">Received</span>
-                                                        </a>
-                                                        <span class="product-description">
-                                                            <?php echo htmlspecialchars(date('M j, Y', strtotime($order['tanggal']))); ?>
-                                                        </span>
-                                                    </div>
-                                                </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    <?php else: ?>
-                                        <div class="alert alert-info">No inbound orders found</div>
-                                    <?php endif; ?>
+                                    <div class="alert alert-info">No inbound orders found</div>
                                 </div>
                                 <div class="tab-pane" id="outbound-tab">
-                                    <?php if (!empty($outboundOrders)): ?>
+                                    <?php if (!empty($dashboardData['outboundOrders'])): ?>
                                         <ul class="products-list product-list-in-box">
-                                            <?php foreach ($outboundOrders as $order): ?>
+                                            <?php foreach ($dashboardData['outboundOrders'] as $order): ?>
                                                 <li class="item">
                                                     <div class="product-info">
                                                         <a href="#" class="product-title">
@@ -801,6 +792,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
         </aside>
     </div>
 
+    <!-- JavaScript Libraries -->
     <script src="../js/jquery.min.js"></script>
     <script src="../js/bootstrap.min.js"></script>
     <script src="../js/AdminLTE/app.js"></script>
@@ -830,10 +822,10 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             const stockPieChart = new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: <?php echo json_encode($pieLabels); ?>,
+                    labels: <?php echo json_encode($dashboardData['pieLabels']); ?>,
                     datasets: [{
-                        data: <?php echo json_encode($pieData); ?>,
-                        backgroundColor: <?php echo json_encode($pieColors); ?>,
+                        data: <?php echo json_encode($dashboardData['pieData']); ?>,
+                        backgroundColor: <?php echo json_encode($dashboardData['pieColors']); ?>,
                         borderWidth: 1
                     }]
                 },
@@ -871,11 +863,11 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
             const stockBarChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels: <?php echo json_encode($barLabels); ?>,
+                    labels: <?php echo json_encode($dashboardData['barLabels']); ?>,
                     datasets: [
                         {
                             label: 'Current Stock',
-                            data: <?php echo json_encode($barStockData); ?>,
+                            data: <?php echo json_encode($dashboardData['barStockData']); ?>,
                             backgroundColor: 'rgba(78, 115, 223, 0.7)',
                             borderColor: 'rgba(78, 115, 223, 1)',
                             borderWidth: 1,
@@ -883,7 +875,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                         },
                         {
                             label: 'Reorder Level',
-                            data: <?php echo json_encode($barReorderData); ?>,
+                            data: <?php echo json_encode($dashboardData['barReorderData']); ?>,
                             backgroundColor: 'rgba(231, 74, 59, 0.7)',
                             borderColor: 'rgba(231, 74, 59, 1)',
                             borderWidth: 1,
@@ -936,7 +928,7 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                                 afterLabel: function(context) {
                                     const datasetIndex = context.datasetIndex;
                                     if (datasetIndex === 0) {
-                                        const reorderLevel = <?php echo json_encode($barReorderData); ?>[context.dataIndex];
+                                        const reorderLevel = <?php echo json_encode($dashboardData['barReorderData']); ?>[context.dataIndex];
                                         const currentStock = context.raw;
                                         if (currentStock < reorderLevel) {
                                             return '⚠️ Below reorder level by ' + (reorderLevel - currentStock);
@@ -948,7 +940,6 @@ while ($row = mysqli_fetch_assoc($queryOutboundOrders)) {
                     }
                 }
             });
-            
             // Smooth animations for elements
             $('.small-box').hover(
                 function() {

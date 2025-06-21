@@ -20,11 +20,11 @@
             <li><a href="stock.php"><i class="fa fa-exchange"></i> <span>Stock Transfer</span></a></li>
             <li class="active"><a href="product.php"><i class="fa fa-list-alt"></i> <span>Products</span></a></li>
             <li class="treeview">
-                <a href="order.php">
+                <a href="new_request.php">
                     <i class="fa fa-th"></i> <span>Request</span>
                 </a>
                 <ul class="treeview-menu">
-                    <li><a href="history_order.php"><i class="fa fa-archive"></i>Request History</a></li>
+                    <li><a href="history_request.php"><i class="fa fa-archive"></i>Request History</a></li>
                 </ul>
             </li>
             <li><a href="mailbox.php"><i class="fa fa-comments"></i> <span>Mailbox</span></a></li>

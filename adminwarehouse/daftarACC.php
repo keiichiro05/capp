@@ -32,6 +32,165 @@ $pegawai = $resultPegawai->fetch_assoc();
 // Check if tanggal column exists
 $column_check = mysqli_query($mysqli, "SHOW COLUMNS FROM pemesanan LIKE 'tanggal'");
 $date_column_exists = (mysqli_num_rows($column_check) > 0);
+
+// Handle export requests
+if (isset($_GET['export'])) {
+    $export_type = $_GET['export'];
+    $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
+    
+    // Get data from database
+    $query = "SELECT p.*, s.Nama as supplier_name 
+            FROM pemesanan p
+            LEFT JOIN supplier s ON p.id_supplier = s.id_supplier";
+    
+    if ($status_filter != '') {
+        $query .= " WHERE p.status = '$status_filter'";
+    }
+    
+    $query .= " ORDER BY p.tanggal DESC";
+    $result = mysqli_query($mysqli, $query) or die(mysqli_error($mysqli));
+    
+    $data = array();
+    $headers = array('#', 'Order ID', 'Order Date', 'Item Name', 'Category', 'Quantity', 'Unit', 'Supplier', 'Branch', 'Status');
+    
+    if (mysqli_num_rows($result) > 0) {
+        $no = 1;
+        while ($row = mysqli_fetch_assoc($result)) {
+            // Determine status text
+            $status = '';
+            if ($row['status'] == '1') {
+                $status = 'Accepted';
+            } elseif ($row['status'] == '2') {
+                $status = 'Declined';
+            } elseif ($row['status'] == '0') {
+                $status = 'Pending';
+            }
+            
+            // Format date
+            $order_date = 'N/A';
+            if ($date_column_exists && !empty($row['tanggal'])) {
+                $order_date = date('d M Y H:i', strtotime($row['tanggal']));
+            } elseif (!empty($row['tanggal'])) {
+                $order_date = date('d M Y H:i', strtotime($row['tanggal']));
+            }
+            
+            $data[] = array(
+                $no++,
+                $row['id_pemesanan'],
+                $order_date,
+                $row['namabarang'],
+                $row['kategori'],
+                $row['jumlah'],
+                $row['satuan'],
+                ($row['supplier_name'] ? $row['supplier_name'] : $row['id_supplier']),
+                $row['cabang'],
+                $status
+            );
+        }
+    }
+    
+    switch ($export_type) {
+        case 'excel':
+            exportExcel($headers, $data);
+            break;
+        case 'csv':
+            exportCSV($headers, $data);
+            break;
+        case 'pdf':
+            exportPDF($headers, $data);
+            break;
+    }
+    exit;
+}
+
+function exportExcel($headers, $data) {
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename=request_history_'.date('Y-m-d').'.xls');
+    
+    echo '<table border="1">';
+    echo '<tr>';
+    foreach ($headers as $header) {
+        echo '<th>'.htmlspecialchars($header).'</th>';
+    }
+    echo '</tr>';
+    
+    foreach ($data as $row) {
+        echo '<tr>';
+        foreach ($row as $cell) {
+            echo '<td>'.htmlspecialchars($cell).'</td>';
+        }
+        echo '</tr>';
+    }
+    
+    echo '</table>';
+    exit;
+}
+
+function exportCSV($headers, $data) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=request_history_'.date('Y-m-d').'.csv');
+    
+    $output = fopen('php://output', 'w');
+    
+    // Add BOM to fix UTF-8 in Excel
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    fputcsv($output, $headers);
+    
+    foreach ($data as $row) {
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
+
+function exportPDF($headers, $data) {
+    require_once('../tcpdf/tcpdf.php');
+    
+    $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetCreator('Warehouse System');
+    $pdf->SetAuthor('Warehouse Manager');
+    $pdf->SetTitle('Request History');
+    $pdf->SetSubject('Request History Export');
+    $pdf->SetKeywords('Request, History, Warehouse');
+    
+    $pdf->SetHeaderData('', 0, 'Request History', 'Generated on '.date('Y-m-d H:i:s'));
+    $pdf->setHeaderFont(Array('helvetica', '', 10));
+    $pdf->setFooterFont(Array('helvetica', '', 8));
+    
+    $pdf->SetDefaultMonospacedFont('courier');
+    $pdf->SetMargins(15, 15, 15);
+    $pdf->SetHeaderMargin(5);
+    $pdf->SetFooterMargin(10);
+    $pdf->SetAutoPageBreak(TRUE, 25);
+    
+    $pdf->AddPage();
+    
+    $html = '<h2>Request History</h2>';
+    $html .= '<table border="1" cellpadding="4">';
+    $html .= '<thead><tr>';
+    
+    foreach ($headers as $header) {
+        $html .= '<th style="background-color:#f2f2f2;font-weight:bold;">'.htmlspecialchars($header).'</th>';
+    }
+    
+    $html .= '</tr></thead><tbody>';
+    
+    foreach ($data as $row) {
+        $html .= '<tr>';
+        foreach ($row as $cell) {
+            $html .= '<td>'.htmlspecialchars($cell).'</td>';
+        }
+        $html .= '</tr>';
+    }
+    
+    $html .= '</tbody></table>';
+    
+    $pdf->writeHTML($html, true, false, true, false, '');
+    $pdf->Output('request_history_'.date('Y-m-d').'.pdf', 'D');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -323,6 +482,75 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
         .label-info { background-color: var(--info) !important; }
         .label-warning { background-color: var(--warning) !important; }
         .label-danger { background-color: var(--danger) !important; }
+        
+        /* Export buttons */
+        .export-buttons {
+            margin-bottom: 15px;
+        }
+        
+        .export-buttons .btn {
+            margin-right: 5px;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-accepted {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-declined {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Filter form */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .total-records {
+            margin-left: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filter-form {
+                margin-bottom: 10px;
+                width: 100%;
+            }
+            
+            .total-records {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
     </style>
 </head>
 <body class="skin-blue">
@@ -386,12 +614,12 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
                     </li>
                     <li class="active">
                         <a href="daftarACC.php">
-                            <i class="fa fa-history"></i> <span>Request History</span>
+                            <i class="fa fa-undo"></i> <span>Request History</span>
                         </a>
                     </li>
                     <li>
                         <a href="stock.php">
-                            <i class="fa fa-cubes"></i> <span>Inventory</span>
+                           <i class="fa fa-archive"></i> <span>Inventory</span>
                         </a>
                     </li>
                     <li>
@@ -423,9 +651,11 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
                 <div class="order-history-container">
                     <div class="filter-container">
                         <div class="filter-form">
-                            <button id="exportExcel" class="btn btn-success" title="Download as Excel"><i class="fa fa-file-excel-o"></i> Excel</button>
-                            <button id="exportCSV" class="btn btn-info" title="Download as CSV"><i class="fa fa-file-text-o"></i> CSV</button>
-                            <button id="exportPDF" class="btn btn-danger" title="Download as PDF"><i class="fa fa-file-pdf-o"></i> PDF</button>
+                            <div class="export-buttons">
+                                <a href="?export=excel<?php echo isset($_GET['status']) ? '&status='.$_GET['status'] : ''; ?>" class="btn btn-success" title="Download as Excel"><i class="fa fa-file-excel-o"></i> Excel</a>
+                                <a href="?export=csv<?php echo isset($_GET['status']) ? '&status='.$_GET['status'] : ''; ?>" class="btn btn-info" title="Download as CSV"><i class="fa fa-file-text-o"></i> CSV</a>
+                                <a href="?export=pdf<?php echo isset($_GET['status']) ? '&status='.$_GET['status'] : ''; ?>" class="btn btn-danger" title="Download as PDF"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                            </div>
                             <form method="get" action="daftarACC.php" class="form-inline">
                                 <select name="status" class="form-control">
                                     <option value="">All Statuses</option>
@@ -600,65 +830,6 @@ $date_column_exists = (mysqli_num_rows($column_check) > 0);
             </section>
         </aside>
     </div>
-    <!-- Export Buttons -->
-
-    <!-- SheetJS & jsPDF CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
-    <script>
-    function getTableData() {
-        var table = document.querySelector('.order-history-table');
-        var data = [];
-        var rows = table.querySelectorAll('tr');
-        for (var i = 0; i < rows.length; i++) {
-            var row = [], cols = rows[i].querySelectorAll('th,td');
-            for (var j = 0; j < cols.length; j++) {
-                row.push(cols[j].innerText.trim());
-            }
-            data.push(row);
-        }
-        return data;
-    }
-
-    // Excel Export
-    document.getElementById('exportExcel').onclick = function() {
-        var data = getTableData();
-        var ws = XLSX.utils.aoa_to_sheet(data);
-        var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Orders");
-        XLSX.writeFile(wb, "orders.xlsx");
-    };
-
-    // CSV Export
-    document.getElementById('exportCSV').onclick = function() {
-        var data = getTableData();
-        var ws = XLSX.utils.aoa_to_sheet(data);
-        var csv = XLSX.utils.sheet_to_csv(ws);
-        var blob = new Blob([csv], {type: "text/csv"});
-        var link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = "orders.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    // PDF Export
-    document.getElementById('exportPDF').onclick = function() {
-        var data = getTableData();
-        var doc = new jspdf.jsPDF('l', 'pt', 'a4');
-        doc.text("Order List", 40, 30);
-        doc.autoTable({
-            head: [data[0]],
-            body: data.slice(1),
-            startY: 50,
-            styles: {fontSize: 8}
-        });
-        doc.save("orders.pdf");
-    };
-    </script>
 
     <script src="../js/jquery.min.js"></script>
     <script src="../js/bootstrap.min.js" type="text/javascript"></script>

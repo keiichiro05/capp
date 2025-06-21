@@ -48,11 +48,54 @@ if (isset($_GET['warehouse']) && !empty($_GET['warehouse'])) {
     $cabang_filter = htmlspecialchars($_GET['warehouse']);
 }
 
+// Handle stock transfer
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer'])) {
+    $product_id = $_POST['product_id'];
+    $quantity = (int)$_POST['quantity'];
+    $transfer_type = $_POST['transfer_type'];
+    $notes = mysqli_real_escape_string($mysqli, $_POST['notes']);
+    
+    // Get current stock
+    $stmt = $mysqli->prepare("SELECT Stok FROM warehouse WHERE no = ?");
+    $stmt->bind_param("s", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $product = $result->fetch_assoc();
+    
+    if ($product) {
+        $current_stock = $product['Stok'];
+        
+        if ($transfer_type === 'out' && $current_stock < $quantity) {
+            $_SESSION['message'] = '<div class="alert alert-danger">Insufficient stock for transfer out!</div>';
+        } else {
+            // Update warehouse stock
+            $new_stock = $transfer_type === 'in' ? $current_stock + $quantity : $current_stock - $quantity;
+            
+            $update_stmt = $mysqli->prepare("UPDATE warehouse SET Stok = ? WHERE no = ?");
+            $update_stmt->bind_param("is", $new_stock, $product_id);
+            $update_stmt->execute();
+            
+            // Record the transfer in transaction history
+            $insert_stmt = $mysqli->prepare("INSERT INTO stock_transactions (product_id, quantity, transfer_type, notes, user_id, transaction_date) 
+                                           VALUES (?, ?, ?, ?, ?, NOW())");
+            $insert_stmt->bind_param("iissi", $product_id, $quantity, $transfer_type, $notes, $idpegawai);
+            $insert_stmt->execute();
+            
+            $_SESSION['message'] = '<div class="alert alert-success">Stock transfer successful!</div>';
+        }
+    } else {
+        $_SESSION['message'] = '<div class="alert alert-danger">Product not found!</div>';
+    }
+    
+    header("Location: stock.php");
+    exit();
+}
+
 function exportData($type, $cabang_filter = '') {
     global $mysqli;
     
     // Get data from database
-    $sql = "SELECT * FROM warehouse";
+    $sql = "SELECT no, Code, Nama, Stok, Kategori, Satuan, reorder_level, cabang FROM warehouse";
     $params = [];
     $types = "";
     
@@ -71,11 +114,12 @@ function exportData($type, $cabang_filter = '') {
 
     // Prepare data for export
     $data = [];
-    $headers = ['Code', 'Name', 'Qty', 'Category', 'Unit', 'Stock Min', 'Warehouse'];
+    $headers = ['ID', 'Code', 'Name', 'Stock', 'Category', 'Unit', 'Reorder Level', 'Warehouse'];
 
     while ($row = $result->fetch_assoc()) {
         $data[] = [
-            $row['code'] ?? '',
+            $row['no'] ?? '',
+            $row['Code'] ?? '',
             $row['Nama'] ?? '',
             $row['Stok'] ?? '',
             $row['Kategori'] ?? '',
@@ -155,8 +199,8 @@ function exportData($type, $cabang_filter = '') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Warehouse Manager Dashboard</title>
+    <title>Warehouse Manager | E-pharm</title>
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <link href="../css/bootstrap.min.css" rel="stylesheet">
     <link href="../css/font-awesome.min.css" rel="stylesheet">
     <link href="../css/AdminLTE.css" rel="stylesheet">
@@ -164,197 +208,8 @@ function exportData($type, $cabang_filter = '') {
     <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4e73df;
-            --success: #1cc88a;
-            --info: #36b9cc;
-            --warning: #f6c23e;
-            --danger: #e74a3b;
-            --dark: #5a5c69;
-            --light: #f8f9fc;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fc;
-        }
-        
-        .dashboard-header {
-            background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
-            color: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        
-        .dashboard-header h1 {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .dashboard-header h1 small {
-            color: rgba(255,255,255,0.7);
-            font-size: 16px;
-            display: block;
-            margin-top: 5px;
-        }
-        
-        .header-date-time {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .header-date-time i {
-            margin-right: 5px;
-        }
-        
-        .small-box {
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            border: none;
-            overflow: hidden;
-        }
-        
-        .small-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        
-        .small-box .inner {
-            padding: 15px;
-        }
-        
-        .small-box h3 {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 5px 0;
-        }
-        
-        .small-box p {
-            font-size: 15px;
-            margin-bottom: 0;
-        }
-        
-        .small-box .icon {
-            font-size: 70px;
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            transition: all 0.3s;
-            opacity: 0.2;
-        }
-        
-        .small-box:hover .icon {
-            opacity: 0.3;
-            transform: scale(1.1);
-        }
-        
-        .small-box-footer {
-            background: rgba(0,0,0,0.05);
-            color: rgba(255,255,255,0.8);
-            display: block;
-            padding: 8px 0;
-            text-align: center;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        
-        .small-box-footer:hover {
-            background: rgba(0,0,0,0.1);
-            color: white;
-        }
-        
-        .box {
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            border: none;
-            margin-bottom: 20px;
-        }
-        
-        .box-header {
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            padding: 15px 20px;
-            background-color: white;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .box-header h3 {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0;
-            display: inline-block;
-        }
-        
-        .box-header .box-tools {
-            position: absolute;
-            right: 20px;
-            top: 15px;
-        }
-        
-        .box-body {
-            padding: 20px;
-            background-color: white;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-        
-        .alert-item {
-            border-left: 4px solid var(--danger);
-            margin-bottom: 10px;
-            border-radius: 6px;
-            transition: all 0.3s;
-            padding: 10px 15px;
-        }
-        
-        .alert-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .stock-critical {
-            background-color: #f8d7da;
-            border-left-color: var(--danger);
-        }
-        
-        .stock-warning {
-            background-color: #fff3cd;
-            border-left-color: var(--warning);
-        }
-        
-        .products-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .products-list .item {
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .products-list .item:last-child {
-            border-bottom: none;
-        }
-        
-        .product-title {
-            font-weight: 500;
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .product-description {
-            font-size: 13px;
-            color: #6c757d;
-        }
-        
+
+        /* Sidebar */
         .sidebar-menu > li > a {
             border-radius: 5px;
             margin: 5px 10px;
@@ -380,6 +235,7 @@ function exportData($type, $cabang_filter = '') {
             border-left-color: var(--primary);
         }
         
+        /* Info Box */
         .info-box {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
@@ -423,6 +279,7 @@ function exportData($type, $cabang_filter = '') {
             margin-top: 5px;
         }
         
+        /* Color Classes */
         .bg-primary { background-color: var(--primary) !important; }
         .bg-success { background-color: var(--success) !important; }
         .bg-info { background-color: var(--info) !important; }
@@ -474,7 +331,9 @@ function exportData($type, $cabang_filter = '') {
             </ul>
         </div>
     </header>
+    
     <div class="wrapper row-offcanvas row-offcanvas-left">
+        <!-- Sidebar -->
         <aside class="left-side sidebar-offcanvas">
             <section class="sidebar">
                 <div class="user-panel">
@@ -486,6 +345,7 @@ function exportData($type, $cabang_filter = '') {
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                
                 <ul class="sidebar-menu">
                     <li>
                         <a href="streamlit.php">
@@ -504,12 +364,12 @@ function exportData($type, $cabang_filter = '') {
                     </li>
                     <li>
                         <a href="daftarACC.php">
-                            <i class="fa fa-history"></i> <span>Request History</span>
+                            <i class="fa fa-undo"></i> <span>Request History</span>
                         </a>
                     </li>
-                    <li class=active>
+                    <li class="active">
                         <a href="stock.php">
-                            <i class="fa fa-cubes"></i> <span>Inventory</span>
+                           <i class="fa fa-archive"></i> <span>Inventory</span>
                         </a>
                     </li>
                     <li>
@@ -520,96 +380,95 @@ function exportData($type, $cabang_filter = '') {
                 </ul>
             </section>
         </aside>
-        <aside class="right-side">
-            <section class="content-header">
-                <h1>
-                    Stock Management
-                    <small>Warehouse Manager</small>
-                </h1>
-                <ol class="breadcrumb">
-                </ol>
-            </section>
 
-            <section class="content">
-                <?php 
-                if (isset($_SESSION['message'])) {
-                    echo $_SESSION['message'];
-                    unset($_SESSION['message']);
-                }
-                ?>
-                
-                <div class="filter-container">
-                    <div class="filter-form">
-                        <a href="?export=excel&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-success" title="Download as Excel">
-                            <i class="fa fa-file-excel-o"></i> Excel
-                        </a>
-                        <a href="?export=csv&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-info" title="Download as CSV">
-                            <i class="fa fa-file-text-o"></i> CSV
-                        </a>
-                        <a href="?export=pdf&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-danger" title="Download as PDF">
-                            <i class="fa fa-file-pdf-o"></i> PDF
-                        </a>
-                        <form method="get" action="stock.php" class="form-inline">
-                            <select name="warehouse" class="form-control">
-                                <option value="">All Warehouse</option>
-                                <option value="Ambon" <?php echo ($cabang_filter == 'Ambon' ? 'selected' : ''); ?>>Ambon</option>
-                                <option value="Cikarang" <?php echo ($cabang_filter == 'Cikarang' ? 'selected' : ''); ?>>Cikarang</option>
-                                <option value="Medan" <?php echo ($cabang_filter == 'Medan' ? 'selected' : ''); ?>>Medan</option>
-                                <option value="Blitar" <?php echo ($cabang_filter == 'Blitar' ? 'selected' : ''); ?>>Blitar</option>
-                                <option value="Surabaya" <?php echo ($cabang_filter == 'Surabaya' ? 'selected' : ''); ?>>Surabaya</option>
-                            </select>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa fa-filter"></i> Filter
-                            </button>
-                            <?php if (!empty($cabang_filter)): ?>
-                                <a href="stock.php" class="btn btn-default">
-                                    <i class="fa fa-times"></i> Clear
-                                </a>
-                            <?php endif; ?>
-                        </form>
-                    </div>
-                    <div class="total-records">
-                        <?php
-                        $count_query = "SELECT COUNT(*) as total FROM warehouse";
-                        $params = [];
-                        $types = "";
-                        
-                        if (!empty($cabang_filter)) {
-                            $count_query .= " WHERE cabang = ?";
-                            $params[] = $cabang_filter;
-                            $types .= "s";
-                        }
-                        
-                        $stmt = $mysqli->prepare($count_query);
-                        if (!empty($params)) {
-                            $stmt->bind_param($types, ...$params);
-                        }
-                        $stmt->execute();
-                        $count_result = $stmt->get_result();
-                        $count_row = $count_result->fetch_assoc();
-                        echo "<span class='badge bg-blue'>" . htmlspecialchars($count_row['total']) . " records found</span>";
-                        ?>
-                    </div>
+    <aside class="right-side">
+        <section class="content-header">
+            <h1>
+                Stock Management
+                <small>Warehouse Manager</small>
+            </h1>
+        </section>
+
+        <section class="content">
+            <?php 
+            if (isset($_SESSION['message'])) {
+                echo $_SESSION['message'];
+                unset($_SESSION['message']);
+            }
+            ?>
+            
+            <div class="filter-container">
+                <div class="filter-form">
+                    <a href="?export=excel&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-success" title="Download as Excel">
+                        <i class="fa fa-file-excel-o"></i> Excel
+                    </a>
+                    <a href="?export=csv&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-info" title="Download as CSV">
+                        <i class="fa fa-file-text-o"></i> CSV
+                    </a>
+                    <a href="?export=pdf&warehouse=<?= urlencode($cabang_filter) ?>" class="btn btn-danger" title="Download as PDF">
+                        <i class="fa fa-file-pdf-o"></i> PDF
+                    </a>
+                    <form method="get" action="stock.php" class="form-inline">
+                        <select name="warehouse" class="form-control">
+                            <option value="">All Warehouse</option>
+                            <option value="Ambon" <?php echo ($cabang_filter == 'Ambon' ? 'selected' : ''); ?>>Ambon</option>
+                            <option value="Cikarang" <?php echo ($cabang_filter == 'Cikarang' ? 'selected' : ''); ?>>Cikarang</option>
+                            <option value="Medan" <?php echo ($cabang_filter == 'Medan' ? 'selected' : ''); ?>>Medan</option>
+                            <option value="Blitar" <?php echo ($cabang_filter == 'Blitar' ? 'selected' : ''); ?>>Blitar</option>
+                            <option value="Surabaya" <?php echo ($cabang_filter == 'Surabaya' ? 'selected' : ''); ?>>Surabaya</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-filter"></i> Filter
+                        </button>
+                        <?php if (!empty($cabang_filter)): ?>
+                            <a href="stock.php" class="btn btn-default">
+                                <i class="fa fa-times"></i> Clear
+                            </a>
+                        <?php endif; ?>
+                    </form>
                 </div>
-                
-                <h1>Stock List</h1>
-                <div class="table-responsive">
+                <div class="total-records">
+                    <?php
+                    $count_query = "SELECT COUNT(*) as total FROM warehouse";
+                    $params = [];
+                    $types = "";
+                    
+                    if (!empty($cabang_filter)) {
+                        $count_query .= " WHERE cabang = ?";
+                        $params[] = $cabang_filter;
+                        $types .= "s";
+                    }
+                    
+                    $stmt = $mysqli->prepare($count_query);
+                    if (!empty($params)) {
+                        $stmt->bind_param($types, ...$params);
+                    }
+                    $stmt->execute();
+                    $count_result = $stmt->get_result();
+                    $count_row = $count_result->fetch_assoc();
+                    echo "<span class='badge bg-blue'>" . htmlspecialchars($count_row['total']) . " records found</span>";
+                    ?>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead>
                         <tr>
-                            <th>Product Id</th>
+                            <th>ID</th>
+                            <th>Code</th>
                             <th>Item Name</th>
                             <th>Stock</th>
                             <th>Category</th>
                             <th>Unit</th>
-                            <th>Stock Min</th>
+                            <th>Reorder Level</th>
                             <th>Warehouse</th>
+                            
                         </tr>
-                    </div>
                     </thead>
                     <tbody>
                         <?php
-                        $sql = "SELECT * FROM warehouse";
+                        $sql = "SELECT no, Code, Nama, Stok, Kategori, Satuan, reorder_level, cabang FROM warehouse";
                         $params = [];
                         $types = "";
                         
@@ -618,6 +477,8 @@ function exportData($type, $cabang_filter = '') {
                             $params[] = $cabang_filter;
                             $types .= "s";
                         }
+                        
+                        $sql .= " ORDER BY Nama ASC";
                         
                         $stmt = $mysqli->prepare($sql);
                         if (!empty($params)) {
@@ -628,7 +489,15 @@ function exportData($type, $cabang_filter = '') {
 
                         if ($hasil->num_rows > 0) {
                             while ($baris = $hasil->fetch_assoc()) {
-                                echo "<tr>
+                                $row_class = '';
+                                if ($baris['Stok'] <= 0) {
+                                    $row_class = 'stock-critical';
+                                } elseif ($baris['Stok'] <= $baris['reorder_level']) {
+                                    $row_class = 'stock-warning';
+                                }
+                                
+                                echo "<tr class='$row_class'>
+                                        <td>" . htmlspecialchars($baris['no'] ?? '') . "</td>
                                         <td>" . htmlspecialchars($baris['Code'] ?? '') . "</td>
                                         <td>" . htmlspecialchars($baris['Nama'] ?? '') . "</td>
                                         <td>" . htmlspecialchars($baris['Stok'] ?? '') . "</td>
@@ -636,20 +505,50 @@ function exportData($type, $cabang_filter = '') {
                                         <td>" . htmlspecialchars($baris['Satuan'] ?? '') . "</td>
                                         <td>" . htmlspecialchars($baris['reorder_level'] ?? '') . "</td>
                                         <td>" . htmlspecialchars($baris['cabang'] ?? '') . "</td>
+                                        
                                     </tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='7' style='text-align:center;'>No Available Stock</td></tr>";
+                            echo "<tr><td colspan='9' style='text-align:center;'>No Available Stock</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
-            </section>
-        </aside>
-    </div>
+            </div>
+        </section>
+    </aside>
+
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="../js/bootstrap.min.js" type="text/javascript"></script>
     <script src="../js/AdminLTE/app.js" type="text/javascript"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Handle transfer button click
+            $('.transfer-btn').click(function() {
+                var productId = $(this).data('id');
+                var productName = $(this).data('name');
+                var currentStock = $(this).data('stock');
+                
+                $('#transfer_product_id').val(productId);
+                $('#transfer_product_name').text(productName);
+                $('#transfer_current_stock').text(currentStock);
+                $('#transfer_quantity').val(1).attr('max', currentStock);
+                
+                $('.transfer-modal').modal('show');
+            });
+            
+            // Change max value when transfer type changes
+            $('input[name="transfer_type"]').change(function() {
+                var currentStock = parseInt($('#transfer_current_stock').text());
+                if ($(this).val() === 'out') {
+                    $('#transfer_quantity').attr('max', currentStock);
+                } else {
+                    $('#transfer_quantity').removeAttr('max');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
